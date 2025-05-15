@@ -7,7 +7,7 @@ type ExtendedMD3Theme = MD3Theme & {
   colors: MD3Theme['colors'] & {
     success: string;
     warning: string;
-  }
+  };
 };
 
 export const lightTheme: ExtendedMD3Theme = {
