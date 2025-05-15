@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Button, Surface, TextInput } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -38,10 +37,10 @@ export default function Auth() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+
       <ThemedView style={styles.container}>
         <Surface style={styles.surface} elevation={4}>
-          <ThemedText type="title" style={styles.title} darkColor='#212121'>
+          <ThemedText type="title" style={styles.title}>
             {isLogin ? 'Sign In' : 'Sign Up'}
           </ThemedText>
 
@@ -102,7 +101,7 @@ export default function Auth() {
           </Button>
         </Surface>
       </ThemedView>
-    </SafeAreaView>
+
   );
 }
 
