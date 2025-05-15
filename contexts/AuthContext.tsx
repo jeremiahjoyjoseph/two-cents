@@ -1,12 +1,12 @@
 import { auth, firestore } from '@/config/firebase';
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface User {
   email: string;
-  name?: string;
+  displayName?: string;
   uid?: string;
 }
 
@@ -24,6 +24,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+      
+        setUser({
+          email: user.email || '',
+          uid: user.uid,
+          displayName: user.displayName || '',
+        });
+
+        console.log("onAuthStateChanged:", user);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
@@ -66,10 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = docSnap.data()
             const userData:User = {
                 uid:data?.uid,
-                name:data?.name,
+                displayName:data?.name,
                 email:data?.email,
             };
             setUser({ ...userData  });
+            console.log("User data updated:", userData);
         }
       
     } catch (error) {

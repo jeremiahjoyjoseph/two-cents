@@ -14,15 +14,10 @@ import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 const HEADER_HEIGHT = 250;
 
 type Props = PropsWithChildren<{
-  headerImage: ReactElement;
-  headerBackgroundColor: { dark: string; light: string };
+  headerImage?: ReactElement;
 }>;
 
-export default function ParallaxScrollView({
-  children,
-  headerImage,
-  headerBackgroundColor,
-}: Props) {
+export default function ParallaxScrollView({ children, headerImage }: Props) {
   const theme = useTheme();
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollViewOffset(scrollRef);
@@ -50,15 +45,15 @@ export default function ParallaxScrollView({
         ref={scrollRef}
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ bottom }}
-        contentContainerStyle={{ paddingBottom: bottom }}>
-        <Animated.View
-          style={[
-            styles.header,
-            { backgroundColor: headerBackgroundColor[theme.dark ? 'dark' : 'light'] },
-            headerAnimatedStyle,
-          ]}>
-          {headerImage}
-        </Animated.View>
+        contentContainerStyle={{ paddingBottom: bottom }}
+      >
+        {headerImage && (
+          <Animated.View
+            style={[styles.header, { backgroundColor: theme.colors.primary }, headerAnimatedStyle]}
+          >
+            {headerImage}
+          </Animated.View>
+        )}
         <ThemedView style={styles.content}>{children}</ThemedView>
       </Animated.ScrollView>
     </ThemedView>
@@ -75,7 +70,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 32,
+    paddingTop: 32,
+    padding: 24,
     gap: 16,
     overflow: 'hidden',
   },
