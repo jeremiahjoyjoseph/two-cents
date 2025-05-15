@@ -52,7 +52,6 @@ export default function Auth() {
               onChangeText={setName}
               mode="outlined"
               style={styles.input}
-              theme={{ colors: { primary: '#424242' } }}
             />
           )}
 
@@ -64,7 +63,6 @@ export default function Auth() {
             keyboardType="email-address"
             autoCapitalize="none"
             style={styles.input}
-            theme={{ colors: { primary: '#424242' } }}
           />
           
           <TextInput
@@ -74,7 +72,6 @@ export default function Auth() {
             mode="outlined"
             secureTextEntry
             style={styles.input}
-            theme={{ colors: { primary: '#424242' } }}
           />
 
           {!isLogin && (
@@ -85,7 +82,6 @@ export default function Auth() {
               mode="outlined"
               secureTextEntry
               style={styles.input}
-              theme={{ colors: { primary: '#424242' } }}
             />
           )}
 
@@ -93,7 +89,6 @@ export default function Auth() {
             mode="contained"
             onPress={handleSubmit}
             style={styles.button}
-            buttonColor="#424242"
           >
             {isLogin ? 'Sign In' : 'Sign Up'}
           </Button>
@@ -102,7 +97,6 @@ export default function Auth() {
             mode="text"
             onPress={() => setIsLogin(!isLogin)}
             style={styles.switchButton}
-            textColor="#424242"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
           </Button>
