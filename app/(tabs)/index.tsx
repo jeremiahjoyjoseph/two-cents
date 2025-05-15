@@ -3,7 +3,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function TabOneScreen() {
+export default function Home() {
   const theme = useTheme();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
