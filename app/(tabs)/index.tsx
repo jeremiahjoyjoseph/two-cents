@@ -1,5 +1,7 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
+import { Button } from 'react-native-paper';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -20,6 +22,15 @@ export default function HomeScreen() {
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
       </ThemedView>
+
+      <Button 
+        mode="contained" 
+        onPress={() => router.push('/(auth)')}
+        style={styles.authButton}
+      >
+        Go to Sign In / Sign Up
+      </Button>
+
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
@@ -71,5 +82,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     position: 'absolute',
+  },
+  authButton: {
+    marginBottom: 16,
   },
 });
