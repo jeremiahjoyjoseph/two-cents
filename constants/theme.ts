@@ -7,6 +7,8 @@ type ExtendedMD3Theme = MD3Theme & {
   colors: MD3Theme['colors'] & {
     success: string;
     warning: string;
+    muted: string;
+    mutedForeground: string;
   };
 };
 
@@ -44,6 +46,9 @@ export const lightTheme: ExtendedMD3Theme = {
     // Custom semantic additions (optional)
     success: Colors.light.success,
     warning: Colors.light.warning,
+
+    muted: Colors.light.muted,
+    mutedForeground: Colors.light.mutedForeground,
 
     // Elevation
     elevation: {
@@ -91,6 +96,9 @@ export const darkTheme: ExtendedMD3Theme = {
     // Custom semantic additions (optional)
     success: Colors.dark.success,
     warning: Colors.dark.warning,
+
+    muted: Colors.dark.muted,
+    mutedForeground: Colors.dark.mutedForeground,
 
     // Elevation
     elevation: {

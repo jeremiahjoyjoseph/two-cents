@@ -27,7 +27,7 @@ export function MenuItem({
     <>
       <TouchableOpacity style={styles.container} onPress={onPress}>
         <ThemedText style={{ color: textColor }}>{label}</ThemedText>
-        {showArrow && <IconSymbol name="chevron.right" size={20} color={textColor} />}
+        {showArrow && <IconSymbol name="chevron-right" size={20} color={textColor} />}
       </TouchableOpacity>
       {showDivider && <View style={[styles.divider, { backgroundColor: theme.colors.outline }]} />}
     </>

@@ -19,7 +19,7 @@ export default function Home() {
       <FAB
         icon="plus"
         style={{ ...styles.fab, backgroundColor: theme.colors.secondary }}
-        onPress={() => router.push('/amount')}
+        onPress={() => router.push('/(transaction)')}
         color={theme.colors.onSecondary}
       />
     </SafeAreaView>

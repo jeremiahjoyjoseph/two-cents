@@ -7,6 +7,7 @@ interface PriceProps {
   symbolPosition?: 'before' | 'after';
   type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
   style?: any;
+  showDecimals?: boolean;
 }
 
 const Price: React.FC<PriceProps> = ({
@@ -15,9 +16,15 @@ const Price: React.FC<PriceProps> = ({
   symbolPosition = 'before',
   type = 'default',
   style,
+  showDecimals = true,
 }) => {
-  // Convert value to number and format to 2 decimal places
-  const formattedPrice = Number(value).toFixed(2);
+  // Format price based on input type and showDecimals prop
+  const formattedPrice =
+    typeof value === 'string'
+      ? value
+      : showDecimals
+      ? Number(value).toFixed(2)
+      : Number(value).toString();
 
   const renderPrice = () => {
     if (symbolPosition === 'before') {
