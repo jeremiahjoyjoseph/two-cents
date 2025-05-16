@@ -1,12 +1,14 @@
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import Price from '@/components/Price';
 import { ThemedView } from '@/components/ThemedView';
+import { useRouter } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { FAB, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
   const theme = useTheme();
+  const router = useRouter();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ParallaxScrollView>
@@ -16,9 +18,9 @@ export default function Home() {
       </ParallaxScrollView>
       <FAB
         icon="plus"
-        style={{ ...styles.fab, backgroundColor: theme.colors.primaryContainer }}
-        onPress={() => console.log('Pressed')}
-        color={theme.colors.onPrimaryContainer}
+        style={{ ...styles.fab, backgroundColor: theme.colors.secondary }}
+        onPress={() => router.push('/amount')}
+        color={theme.colors.onSecondary}
       />
     </SafeAreaView>
   );
