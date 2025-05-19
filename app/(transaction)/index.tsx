@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { Button, Divider, TextInput, useTheme } from 'react-native-paper';
+import { Button, TextInput, useTheme } from 'react-native-paper';
 
 import Price from '@/components/Price';
 import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useAuth } from '@/contexts/AuthContext';
+import { addTransaction } from '@/lib/api/transactions';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AmountModal } from './components/AmountModal';
-import { TransactionTypeModal } from './components/TransactionTypeModal';
+import { TransactionType, TransactionTypeModal } from './components/TransactionTypeModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -29,7 +31,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   titleInput: {
-    marginTop: 16,
+    marginTop: 32,
     backgroundColor: 'transparent',
     fontWeight: 'bold',
     paddingHorizontal: 0,
@@ -54,16 +56,34 @@ const styles = StyleSheet.create({
 export default function Transaction() {
   const theme = useTheme();
   const router = useRouter();
+  const { user } = useAuth();
   const [isModalVisible, setModalVisible] = useState(false);
   const [amount, setAmount] = useState('0');
   const [title, setTitle] = useState('');
   const [isTransactionTypeModalVisible, setTransactionTypeModalVisible] = useState(false);
-  const [selectedType, setSelectedType] = useState<'income' | 'expense'>('expense');
+  const [selectedType, setSelectedType] = useState<TransactionType>('expense');
 
-  const handleSubmit = (amount: string) => {
-    // TODO: Handle amount submission
-    console.log('Amount:', amount);
-    console.log('Title:', title);
+  const handleSubmit = async (amount: string) => {
+    if (!user) {
+      console.error('No user logged in');
+      return;
+    }
+
+    const transaction = {
+      type: selectedType,
+      amount: parseFloat(amount),
+      title: title,
+      date: new Date().toISOString(),
+      createdBy: user.uid,
+    };
+
+    try {
+      await addTransaction(user.uid, null, transaction);
+      router.back();
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      // Handle error (show error message to user etc)
+    }
   };
 
   const handleSetType = () => {
@@ -144,7 +164,6 @@ export default function Transaction() {
           />
 
           <ThemedView style={styles.bottomSection}>
-            <Divider />
             <TouchableOpacity style={styles.priceContainer} onPress={() => setModalVisible(true)}>
               <Price value={parseFloat(amount)} type="title" style={styles.amountText} />
             </TouchableOpacity>
@@ -157,7 +176,6 @@ export default function Transaction() {
       <AmountModal
         isVisible={isModalVisible}
         onClose={() => setModalVisible(false)}
-        onSubmit={handleSubmit}
         amount={amount}
         setAmount={setAmount}
       />

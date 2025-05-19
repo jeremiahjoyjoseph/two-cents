@@ -3,7 +3,7 @@
 import { MD3DarkTheme, MD3LightTheme, MD3Theme } from 'react-native-paper';
 import { Colors } from './Colors';
 
-type ExtendedMD3Theme = MD3Theme & {
+export type ExtendedMD3Theme = MD3Theme & {
   colors: MD3Theme['colors'] & {
     success: string;
     warning: string;

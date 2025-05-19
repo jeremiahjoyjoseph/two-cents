@@ -71,3 +71,18 @@ export const getTransactionsByMonth = async (
     ...doc.data(),
   })) as Transaction[];
 };
+
+export const getAllTransactions = async (
+  userId: string,
+  groupId: string | null
+): Promise<Transaction[]> => {
+  const path = getTransactionPath(userId, groupId);
+  const ref = collection(firestore, path);
+  const q = query(ref, orderBy('date', 'desc'));
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Transaction[];
+};

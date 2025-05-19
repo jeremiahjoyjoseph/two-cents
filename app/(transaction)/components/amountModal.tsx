@@ -18,7 +18,7 @@ const KEYPAD_LAYOUT = [
 interface AmountProps {
   isVisible: boolean;
   onClose: () => void;
-  onSubmit: (amount: string) => void;
+  onSubmit?: (amount: string) => void;
   amount: string;
   setAmount: (amount: string) => void;
 }
@@ -114,7 +114,6 @@ export function AmountModal({ isVisible, onClose, onSubmit, amount, setAmount }:
   };
 
   const handleSubmit = () => {
-    onSubmit(amount);
     onClose();
   };
 

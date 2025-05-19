@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export type Transaction = {
   id?: string;
@@ -8,10 +8,10 @@ export type Transaction = {
   amount: number;
   type: TransactionType;
   date: string;
-  createdAt?: Timestamp;
+  createdAt: Timestamp;
   createdBy: string;
 };
 
-export type TransactionInput = Omit<Transaction, 'createdAt'>;
+export type TransactionInput = Omit<Transaction, 'createdAt' | 'id'>;
 
 export type TransactionUpdate = Partial<Transaction>;
