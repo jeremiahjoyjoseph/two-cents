@@ -17,7 +17,7 @@ export default function TransactionLayout() {
       <Stack.Screen
         name="index"
         options={{
-          animation: 'slide_from_right',
+          animation: 'ios_from_right',
         }}
       />
     </Stack>

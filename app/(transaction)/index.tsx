@@ -3,11 +3,13 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Button, Divider, TextInput, useTheme } from 'react-native-paper';
 
 import Price from '@/components/Price';
+import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AmountModal } from './components/amountModal';
+import { AmountModal } from './components/AmountModal';
+import { TransactionTypeModal } from './components/TransactionTypeModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -55,6 +57,8 @@ export default function Transaction() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [amount, setAmount] = useState('0');
   const [title, setTitle] = useState('');
+  const [isTransactionTypeModalVisible, setTransactionTypeModalVisible] = useState(false);
+  const [selectedType, setSelectedType] = useState<'income' | 'expense'>('expense');
 
   const handleSubmit = (amount: string) => {
     // TODO: Handle amount submission
@@ -62,22 +66,59 @@ export default function Transaction() {
     console.log('Title:', title);
   };
 
+  const handleSetType = () => {
+    // You can handle the selected type here (e.g., update form, etc.)
+    setTransactionTypeModalVisible(false);
+  };
+
   return (
     <>
       <SafeAreaView style={styles.container}>
         <ThemedView style={styles.mainContainer}>
-          <TouchableOpacity
-            style={[
-              styles.closeButton,
-              {
-                backgroundColor: theme.colors.background,
-                borderColor: theme.colors.outline,
-              },
-            ]}
-            onPress={() => router.back()}
+          <ThemedView
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
           >
-            <IconSymbol name="close" size={20} color={theme.colors.onSurface} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.closeButton,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.outline,
+                },
+              ]}
+              onPress={() => router.back()}
+            >
+              <IconSymbol name="close" size={20} color={theme.colors.onSurface} />
+            </TouchableOpacity>
+
+            <ThemedButton
+              mode="outlined"
+              icon={() => (
+                <IconSymbol
+                  name={
+                    selectedType === 'income'
+                      ? 'file-download'
+                      : selectedType === 'expense'
+                      ? 'file-upload'
+                      : 'swap-horiz'
+                  }
+                  size={24}
+                  color={theme.colors.onSurface}
+                />
+              )}
+              onPress={() => setTransactionTypeModalVisible(true)}
+              style={{
+                borderRadius: 30,
+                backgroundColor: theme.colors.background,
+              }}
+            >
+              {selectedType === 'income'
+                ? 'Income'
+                : selectedType === 'expense'
+                ? 'Expense'
+                : 'Transfer'}
+            </ThemedButton>
+          </ThemedView>
 
           <TextInput
             mode="flat"
@@ -85,7 +126,13 @@ export default function Transaction() {
             value={title}
             onChangeText={setTitle}
             style={styles.titleInput}
-            placeholder="Enter expense title"
+            placeholder={
+              selectedType === 'income'
+                ? 'Enter income title'
+                : selectedType === 'expense'
+                ? 'Enter expense title'
+                : 'Enter transfer title'
+            }
             underlineColor={theme.colors.outlineVariant}
             activeUnderlineColor={theme.colors.outlineVariant}
             contentStyle={{
@@ -113,6 +160,13 @@ export default function Transaction() {
         onSubmit={handleSubmit}
         amount={amount}
         setAmount={setAmount}
+      />
+      <TransactionTypeModal
+        isVisible={isTransactionTypeModalVisible}
+        onClose={() => setTransactionTypeModalVisible(false)}
+        selectedType={selectedType}
+        onSelectType={setSelectedType}
+        onSet={handleSetType}
       />
     </>
   );
