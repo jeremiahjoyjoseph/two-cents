@@ -84,7 +84,13 @@ const getStyles = (theme: MD3Theme) =>
     },
   });
 
-export function AmountModal({ isVisible, onClose, onSubmit, amount, setAmount }: AmountProps) {
+export default function AmountModal({
+  isVisible,
+  onClose,
+  onSubmit,
+  amount,
+  setAmount,
+}: AmountProps) {
   const theme = useTheme();
   const styles = getStyles(theme);
 

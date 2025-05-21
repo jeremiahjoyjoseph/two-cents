@@ -104,7 +104,7 @@ const options = [
   },
 ] as const;
 
-export function TransactionTypeModal({
+export default function TransactionTypeModal({
   isVisible,
   onClose,
   selectedType,
