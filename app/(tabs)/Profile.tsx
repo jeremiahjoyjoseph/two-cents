@@ -1,5 +1,5 @@
+import { GeneratePartnerCodeModal } from '@/components/GeneratePartnerCodeModal';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { PartnerCodeModal } from '@/components/PartnerCodeModal';
 import { ThemedText } from '@/components/ThemedText';
 import { MenuItem } from '@/components/ui/MenuItem';
 import { auth } from '@/config/firebase';
@@ -11,8 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function Profile() {
   const theme = useTheme();
   const [isPartnerCodeModalVisible, setIsPartnerCodeModalVisible] = useState(false);
-  // TODO: Replace this with actual group ID from your app's state/context
-  const groupId = 'default-group';
 
   const handleSignOut = () => {
     signOut(auth);
@@ -27,13 +25,12 @@ export default function Profile() {
       <ParallaxScrollView>
         <ThemedText type="title">Profile</ThemedText>
         <MenuItem label="Sign Out" onPress={() => handleSignOut()} />
-        <MenuItem label="Generate Partner Code" onPress={() => handleGeneratePartnerCode()} />
+        <MenuItem label="Link Your Account :D" onPress={() => handleGeneratePartnerCode()} />
       </ParallaxScrollView>
 
-      <PartnerCodeModal
+      <GeneratePartnerCodeModal
         visible={isPartnerCodeModalVisible}
         onClose={() => setIsPartnerCodeModalVisible(false)}
-        groupId={groupId}
       />
     </SafeAreaView>
   );
