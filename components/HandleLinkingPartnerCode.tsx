@@ -67,7 +67,7 @@ export const HandleLinkingPartnerCode: React.FC<HandleLinkingPartnerCodeProps> =
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
-  const { user } = useAuth();
+  const { user, updateLinkedGroupId } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export const HandleLinkingPartnerCode: React.FC<HandleLinkingPartnerCodeProps> =
       if (!code || code.length !== 6) {
         throw new Error('Please enter a valid 6-digit code');
       }
-      await redeemPartnerCode(user.uid, code);
+      await redeemPartnerCode(user.uid, code, updateLinkedGroupId);
       Alert.alert(
         'Success',
         'Your account has been successfully linked with your partner. You can now share and manage transactions together.',

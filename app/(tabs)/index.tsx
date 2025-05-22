@@ -5,16 +5,14 @@ import { SummaryCards } from '@/components/SummaryCards';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { firestore } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllTransactions } from '@/lib/api/transactions';
 import { Transaction } from '@/types/transactions';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Platform, RefreshControl, StyleSheet, View } from 'react-native';
 import { FAB, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,27 +22,34 @@ export default function Home() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedType, setSelectedType] = useState<'income' | 'expense' | null>(null);
   const tabBarHeight = useBottomTabBarHeight();
 
-  async function fetchData() {
-    if (!user?.uid) return;
-
+  const fetchData = async () => {
     try {
-      // Get user's linkedGroupId
-      const userDoc = await getDoc(doc(firestore, 'users', user.uid));
-      const userData = userDoc.data();
-      const groupId = userData?.linkedGroupId || null;
+      if (!user) {
+        console.log('No user logged in');
+        return;
+      }
 
-      const data = await getAllTransactions(user.uid, groupId);
+      const groupId = user.linkedGroupId || null;
+      console.log('[fetchData] Group ID:', groupId);
 
-      setTransactions(data);
+      const transactions = await getAllTransactions(user.uid, groupId);
+      setTransactions(transactions);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, [user?.uid]);
 
   useEffect(() => {
     fetchData();
@@ -80,7 +85,9 @@ export default function Home() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ParallaxScrollView>
+      <ParallaxScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <ThemedView style={styles.container}>
           <Price
             value={getTotalIncome() - getTotalExpense()}

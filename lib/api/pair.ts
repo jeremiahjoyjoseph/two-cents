@@ -150,7 +150,11 @@ export const generatePairCode = async (uid: string) => {
   return code;
 };
 
-export const redeemPartnerCode = async (uid: string, code: string): Promise<string> => {
+export const redeemPartnerCode = async (
+  uid: string,
+  code: string,
+  updateLinkedGroupId: (groupId: string | null) => void
+): Promise<string> => {
   console.log('[redeemPartnerCode] Starting code redemption:', { uid, code });
 
   try {
@@ -205,17 +209,25 @@ export const redeemPartnerCode = async (uid: string, code: string): Promise<stri
       linkedGroupId: groupId,
     });
 
-    // Step 4: Migrate transactions
-    console.log('[redeemPartnerCode] Starting transaction migration...');
-    const transactionsRef = collection(firestore, 'users', codeData.generatedBy, 'transactions');
-    const transactionsSnapshot = await getDocs(transactionsRef);
-    console.log('[redeemPartnerCode] Found transactions to migrate:', transactionsSnapshot.size);
+    // Step 4: Migrate and delete transactions
+    console.log('[redeemPartnerCode] Starting transaction migration and deletion...');
 
-    // Create a new batch for transaction migration
+    // Get transactions from both users
+    const [generatorTransactions, redeemerTransactions] = await Promise.all([
+      getDocs(collection(firestore, 'users', codeData.generatedBy, 'transactions')),
+      getDocs(collection(firestore, 'users', uid, 'transactions')),
+    ]);
+
+    console.log('[redeemPartnerCode] Found transactions:', {
+      generator: generatorTransactions.size,
+      redeemer: redeemerTransactions.size,
+    });
+
+    // Create a new batch for transaction operations
     const transactionBatch = writeBatch(firestore);
 
-    // Copy each transaction to the group
-    transactionsSnapshot.docs.forEach(docSnapshot => {
+    // Migrate generator's transactions to group
+    generatorTransactions.docs.forEach(docSnapshot => {
       const transactionData = docSnapshot.data();
       const newTransactionRef = doc(collection(firestore, 'groups', groupId, 'transactions'));
 
@@ -224,7 +236,12 @@ export const redeemPartnerCode = async (uid: string, code: string): Promise<stri
         createdBy: codeData.generatedBy,
       });
 
-      // Delete the transaction from user's collection
+      // Delete the transaction from generator's collection
+      transactionBatch.delete(docSnapshot.ref);
+    });
+
+    // Delete redeemer's transactions
+    redeemerTransactions.docs.forEach(docSnapshot => {
       transactionBatch.delete(docSnapshot.ref);
     });
 
@@ -236,6 +253,9 @@ export const redeemPartnerCode = async (uid: string, code: string): Promise<stri
     console.log('[redeemPartnerCode] Committing all changes...');
     await Promise.all([batch.commit(), transactionBatch.commit()]);
     console.log('[redeemPartnerCode] Successfully completed all operations');
+
+    // Update user data in auth context
+    updateLinkedGroupId(groupId);
 
     return groupId;
   } catch (error) {

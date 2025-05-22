@@ -1,38 +1,55 @@
-import { auth } from '@/config/firebase';
+import { auth, firestore } from '@/config/firebase';
 import { loginUser, registerUser, updateUserData } from '@/lib/api/auth';
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
-import { useRouter } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
+  isAuthReady: boolean;
   login: (data: UserLoginData) => Promise<void>;
   register: (data: UserRegistrationData) => Promise<UserResponse>;
   updateUser: (uid: string) => Promise<void>;
+  updateLinkedGroupId: (groupId: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  const updateLinkedGroupId = (groupId: string | null) => {
+    if (user) {
+      setUser({ ...user, linkedGroupId: groupId });
+    }
+  };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      if (user) {
-        setUser({
-          email: user.email || '',
-          uid: user.uid,
-          name: user.displayName || '',
-        });
-
-        console.log('onAuthStateChanged:', user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(firestore, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as User);
+          } else {
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: firebaseUser.displayName || '',
+              linkedGroupId: null,
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUser(null);
+        }
       } else {
         setUser(null);
-        router.replace('/(auth)');
       }
+      setIsAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
@@ -57,7 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, updateUser }}>
+    <AuthContext.Provider
+      value={{ user, setUser, isAuthReady, login, register, updateUser, updateLinkedGroupId }}
+    >
       {children}
     </AuthContext.Provider>
   );

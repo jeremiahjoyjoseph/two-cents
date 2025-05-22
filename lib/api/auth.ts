@@ -51,6 +51,7 @@ export const updateUserData = async (uid: string): Promise<User> => {
         uid: data?.uid,
         name: data?.name,
         email: data?.email,
+        linkedGroupId: data?.linkedGroupId,
       };
       return userData;
     }

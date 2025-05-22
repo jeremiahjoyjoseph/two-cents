@@ -85,7 +85,7 @@ export default function Transaction() {
 
   const handleSubmit = async (amount: string) => {
     if (!user) {
-      console.error('No user logged in');
+      console.log('No user logged in');
       return;
     }
 
@@ -97,13 +97,16 @@ export default function Transaction() {
       createdBy: user.uid,
     };
 
+    const groupId = user?.linkedGroupId || null;
+    console.log('[fetchData] Group ID:', groupId);
+
     try {
       if (transactionId) {
         await updateTransaction(user.uid, user.linkedGroupId || null, transactionId, transaction);
       } else {
         await addTransaction(user.uid, user.linkedGroupId || null, transaction);
       }
-      router.replace('/(tabs)');
+      router.dismiss();
     } catch (error) {
       console.error('Error saving transaction:', error);
       // Handle error (show error message to user etc)
