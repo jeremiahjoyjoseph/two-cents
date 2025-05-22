@@ -1,7 +1,8 @@
 import { useFonts } from 'expo-font';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 
@@ -13,6 +14,7 @@ function RootLayoutNav() {
   const { user } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
@@ -23,7 +25,19 @@ function RootLayoutNav() {
     }
   }, [user, segments]);
 
-  return <Slot />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 500,
+        contentStyle: {
+          backgroundColor:
+            colorScheme === 'dark' ? darkTheme.colors.background : lightTheme.colors.background,
+        },
+      }}
+    />
+  );
 }
 
 export default function RootLayout() {
@@ -35,11 +49,19 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <AuthProvider>
-      <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
-        <RootLayoutNav />
-        <StatusBar style="auto" />
-      </PaperProvider>
-    </AuthProvider>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor:
+          colorScheme === 'dark' ? darkTheme.colors.background : lightTheme.colors.background,
+      }}
+    >
+      <AuthProvider>
+        <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
+          <RootLayoutNav />
+          <StatusBar style="auto" />
+        </PaperProvider>
+      </AuthProvider>
+    </View>
   );
 }

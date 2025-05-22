@@ -10,9 +10,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getAllTransactions } from '@/lib/api/transactions';
 import { Transaction } from '@/types/transactions';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { FAB, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,29 +24,39 @@ export default function Home() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState<'income' | 'expense' | null>(null);
   const tabBarHeight = useBottomTabBarHeight();
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!user?.uid) return;
+  async function fetchData() {
+    if (!user?.uid) return;
 
-      try {
-        // Get user's linkedGroupId
-        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
-        const userData = userDoc.data();
-        const groupId = userData?.linkedGroupId || null;
+    try {
+      // Get user's linkedGroupId
+      const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+      const userData = userDoc.data();
+      const groupId = userData?.linkedGroupId || null;
 
-        const data = await getAllTransactions(user.uid, groupId);
-        setTransactions(data);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-      } finally {
-        setLoading(false);
-      }
+      const data = await getAllTransactions(user.uid, groupId);
+
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     fetchData();
   }, [user?.uid]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.uid) {
+        fetchData();
+      }
+    }, [user?.uid])
+  );
 
   const getTotalExpense = () => {
     return transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
@@ -54,6 +65,10 @@ export default function Home() {
   const getTotalIncome = () => {
     return transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   };
+
+  const filteredTransactions = selectedType
+    ? transactions.filter(t => t.type === selectedType)
+    : transactions;
 
   if (loading) {
     return (
@@ -73,8 +88,13 @@ export default function Home() {
             type="title"
           />
         </ThemedView>
-        <SummaryCards income={getTotalIncome()} expenses={getTotalExpense()} />
-        {transactions.map(t => (
+        <SummaryCards
+          income={getTotalIncome()}
+          expenses={getTotalExpense()}
+          selected={selectedType}
+          onSelect={setSelectedType}
+        />
+        {filteredTransactions.map(t => (
           <Card
             key={t.id || t.createdAt?.toString()}
             id={t.id || ''}

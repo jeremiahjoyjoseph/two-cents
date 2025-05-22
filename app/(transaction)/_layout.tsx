@@ -12,14 +12,11 @@ export default function TransactionLayout() {
         contentStyle: {
           backgroundColor: theme.colors.background,
         },
+        animation: 'slide_from_right',
+        animationDuration: 500,
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{
-          animation: 'ios_from_right',
-        }}
-      />
+      <Stack.Screen name="index" />
     </Stack>
   );
 }

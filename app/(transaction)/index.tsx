@@ -99,11 +99,11 @@ export default function Transaction() {
 
     try {
       if (transactionId) {
-        await updateTransaction(user.uid, null, transactionId, transaction);
+        await updateTransaction(user.uid, user.linkedGroupId || null, transactionId, transaction);
       } else {
-        await addTransaction(user.uid, null, transaction);
+        await addTransaction(user.uid, user.linkedGroupId || null, transaction);
       }
-      router.back();
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('Error saving transaction:', error);
       // Handle error (show error message to user etc)
@@ -130,7 +130,7 @@ export default function Transaction() {
                   borderColor: theme.colors.outline,
                 },
               ]}
-              onPress={() => router.back()}
+              onPress={() => router.dismiss()}
             >
               <IconSymbol name="close" size={20} color={theme.colors.onSurface} />
             </TouchableOpacity>

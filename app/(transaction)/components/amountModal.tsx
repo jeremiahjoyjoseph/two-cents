@@ -98,7 +98,6 @@ export default function AmountModal({
   // Reset local amount when modal becomes visible
   useEffect(() => {
     if (isVisible) {
-      console.log('Setting local amount:', initialAmount);
       setLocalAmount(initialAmount);
     }
   }, [isVisible, initialAmount]);
@@ -135,7 +134,6 @@ export default function AmountModal({
   const handleSubmit = () => {
     // Ensure we're sending a valid number string
     const finalAmount = localAmount === '0' ? '0' : localAmount;
-    console.log('Final amount:', finalAmount);
 
     setParentAmount(finalAmount);
     onClose();
