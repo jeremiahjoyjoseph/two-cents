@@ -49,7 +49,7 @@ export const updateUserData = async (uid: string): Promise<User> => {
       const data = docSnap.data();
       const userData: User = {
         uid: data?.uid,
-        displayName: data?.name,
+        name: data?.name,
         email: data?.email,
       };
       return userData;

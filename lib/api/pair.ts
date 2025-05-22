@@ -207,7 +207,7 @@ export const redeemPartnerCode = async (uid: string, code: string): Promise<stri
 
     // Step 4: Migrate transactions
     console.log('[redeemPartnerCode] Starting transaction migration...');
-    const transactionsRef = collection(firestore, 'users', uid, 'transactions');
+    const transactionsRef = collection(firestore, 'users', codeData.generatedBy, 'transactions');
     const transactionsSnapshot = await getDocs(transactionsRef);
     console.log('[redeemPartnerCode] Found transactions to migrate:', transactionsSnapshot.size);
 
@@ -221,8 +221,11 @@ export const redeemPartnerCode = async (uid: string, code: string): Promise<stri
 
       transactionBatch.set(newTransactionRef, {
         ...transactionData,
-        createdBy: uid,
+        createdBy: codeData.generatedBy,
       });
+
+      // Delete the transaction from user's collection
+      transactionBatch.delete(docSnapshot.ref);
     });
 
     // Step 5: Delete the pair code

@@ -2,6 +2,23 @@ import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
+// Map Material Icons names to SF Symbol names
+const iconNameMap: Record<string, SymbolViewProps['name']> = {
+  'chevron-right': 'chevron.right',
+  'chevron.left': 'chevron.left',
+  'arrow-upward': 'arrow.up',
+  'arrow-downward': 'arrow.down',
+  close: 'xmark',
+  check: 'checkmark',
+  home: 'house',
+  person: 'person',
+  key: 'key',
+  'content-copy': 'doc.on.doc',
+  'file-download': 'arrow.down.doc',
+  'file-upload': 'arrow.up.doc',
+  add: 'plus',
+};
+
 export function IconSymbol({
   name,
   size = 24,
@@ -9,7 +26,7 @@ export function IconSymbol({
   style,
   weight = 'regular',
 }: {
-  name: SymbolViewProps['name'];
+  name: string;
   size?: number;
   color?: string;
   style?: StyleProp<ViewStyle>;
@@ -17,13 +34,14 @@ export function IconSymbol({
 }) {
   const theme = useTheme();
   const iconColor = color ?? theme.colors.onSurface;
+  const sfSymbolName = iconNameMap[name] || name;
 
   return (
     <SymbolView
       weight={weight}
       tintColor={iconColor}
       resizeMode="scaleAspectFit"
-      name={name}
+      name={sfSymbolName}
       style={[
         {
           width: size,

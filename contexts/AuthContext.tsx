@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           email: user.email || '',
           uid: user.uid,
-          displayName: user.displayName || '',
+          name: user.displayName || '',
         });
 
         console.log('onAuthStateChanged:', user.uid);

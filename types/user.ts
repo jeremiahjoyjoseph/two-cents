@@ -1,7 +1,7 @@
 export type User = {
   uid: string;
   email: string;
-  displayName?: string;
+  name?: string;
   linkedGroupId?: string | null; // null if solo
   createdAt?: string; // ISO or Timestamp
 };

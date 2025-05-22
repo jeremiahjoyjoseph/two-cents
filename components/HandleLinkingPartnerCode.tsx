@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { redeemPartnerCode } from '@/lib/api/pair';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { Button, MD3Theme, TextInput, useTheme } from 'react-native-paper';
 import { ThemedText } from './ThemedText';
@@ -81,7 +81,11 @@ export const HandleLinkingPartnerCode: React.FC<HandleLinkingPartnerCodeProps> =
         throw new Error('Please enter a valid 6-digit code');
       }
       await redeemPartnerCode(user.uid, code);
-      onDismiss();
+      Alert.alert(
+        'Success',
+        'Your account has been successfully linked with your partner. You can now share and manage transactions together.',
+        [{ text: 'OK', onPress: onDismiss }]
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to link partner code');
     }
