@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { Button, MD3Theme, useTheme } from 'react-native-paper';
@@ -88,38 +88,56 @@ export default function AmountModal({
   isVisible,
   onClose,
   onSubmit,
-  amount,
-  setAmount,
+  amount: initialAmount,
+  setAmount: setParentAmount,
 }: AmountProps) {
   const theme = useTheme();
   const styles = getStyles(theme);
+  const [localAmount, setLocalAmount] = useState(initialAmount);
+
+  // Reset local amount when modal becomes visible
+  useEffect(() => {
+    if (isVisible) {
+      console.log('Setting local amount:', initialAmount);
+      setLocalAmount(initialAmount);
+    }
+  }, [isVisible, initialAmount]);
 
   const handleKeyPress = (key: string) => {
     if (key === '⌫') {
-      setAmount(amount.length > 1 ? amount.slice(0, -1) : '0');
+      if (localAmount.length <= 1 || localAmount === '0') {
+        setLocalAmount('0');
+      } else {
+        setLocalAmount(localAmount.slice(0, -1));
+      }
       return;
     }
 
     if (key === '.') {
-      if (amount.includes('.')) return; // Don't allow multiple decimal points
-      setAmount(amount + key);
+      if (localAmount.includes('.')) return; // Don't allow multiple decimal points
+      setLocalAmount(localAmount + key);
       return;
     }
 
     // If there's a decimal point, check decimal places
-    if (amount.includes('.')) {
-      const decimalPlaces = amount.split('.')[1].length;
+    if (localAmount.includes('.')) {
+      const decimalPlaces = localAmount.split('.')[1].length;
       if (decimalPlaces >= 2) return; // Don't allow more than 2 decimal places
     }
 
-    if (amount === '0' && key !== '.') {
-      setAmount(key);
+    if (localAmount === '0' && key !== '.') {
+      setLocalAmount(key);
     } else {
-      setAmount(amount + key);
+      setLocalAmount(localAmount + key);
     }
   };
 
   const handleSubmit = () => {
+    // Ensure we're sending a valid number string
+    const finalAmount = localAmount === '0' ? '0' : localAmount;
+    console.log('Final amount:', finalAmount);
+
+    setParentAmount(finalAmount);
     onClose();
   };
 
@@ -138,7 +156,7 @@ export default function AmountModal({
       <ThemedView style={styles.modalContent}>
         {/* Amount Display */}
         <ThemedView style={styles.amountContainer}>
-          <Price value={amount} symbolPosition="after" type="title" showDecimals={false} />
+          <Price value={localAmount} symbolPosition="after" type="title" showDecimals={false} />
         </ThemedView>
 
         {/* Keypad */}

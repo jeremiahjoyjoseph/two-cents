@@ -54,6 +54,7 @@ export default function Home() {
         {transactions.map(t => (
           <Card
             key={t.id || t.createdAt?.toString()}
+            id={t.id || ''}
             title={t.title}
             amount={t.amount}
             date={t.date}

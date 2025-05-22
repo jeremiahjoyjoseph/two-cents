@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Button, TextInput, useTheme } from 'react-native-paper';
 
@@ -7,11 +7,11 @@ import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
-import { addTransaction } from '@/lib/api/transactions';
-import { useRouter } from 'expo-router';
+import { addTransaction, updateTransaction } from '@/lib/api/transactions';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AmountModal } from './components/AmountModal';
-import { TransactionType, TransactionTypeModal } from './components/TransactionTypeModal';
+import AmountModal from './components/AmountModal';
+import TransactionTypeModal, { TransactionType } from './components/TransactionTypeModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -56,12 +56,32 @@ const styles = StyleSheet.create({
 export default function Transaction() {
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { user } = useAuth();
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [amount, setAmount] = useState('0');
-  const [title, setTitle] = useState('');
+  const [isModalVisible, setModalVisible] = useState(true);
+  const [amount, setAmount] = useState(params.amount?.toString() || '0');
+  const [title, setTitle] = useState(params.title?.toString() || '');
   const [isTransactionTypeModalVisible, setTransactionTypeModalVisible] = useState(false);
-  const [selectedType, setSelectedType] = useState<TransactionType>('expense');
+  const [selectedType, setSelectedType] = useState<TransactionType>(
+    (params.type as TransactionType) || 'expense'
+  );
+  const [transactionId, setTransactionId] = useState<string | null>(params.id?.toString() || null);
+
+  useEffect(() => {
+    // Only set initial values if they exist and haven't been set yet
+    if (params.amount && !amount) {
+      setAmount(params.amount.toString());
+    }
+    if (params.title && !title) {
+      setTitle(params.title.toString());
+    }
+    if (params.type && selectedType === 'expense') {
+      setSelectedType(params.type as TransactionType);
+    }
+    if (params.id && !transactionId) {
+      setTransactionId(params.id.toString());
+    }
+  }, []); // Empty dependency array means this only runs once on mount
 
   const handleSubmit = async (amount: string) => {
     if (!user) {
@@ -78,10 +98,14 @@ export default function Transaction() {
     };
 
     try {
-      await addTransaction(user.uid, null, transaction);
+      if (transactionId) {
+        await updateTransaction(user.uid, null, transactionId, transaction);
+      } else {
+        await addTransaction(user.uid, null, transaction);
+      }
       router.back();
     } catch (error) {
-      console.error('Error creating transaction:', error);
+      console.error('Error saving transaction:', error);
       // Handle error (show error message to user etc)
     }
   };
@@ -168,7 +192,7 @@ export default function Transaction() {
               <Price value={parseFloat(amount)} type="title" style={styles.amountText} />
             </TouchableOpacity>
             <Button mode="contained" onPress={() => handleSubmit(amount)} style={styles.addButton}>
-              Add
+              Submit
             </Button>
           </ThemedView>
         </ThemedView>

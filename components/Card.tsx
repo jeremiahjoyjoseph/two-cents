@@ -1,5 +1,6 @@
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
 import Price from './Price';
 import { ThemedText } from './ThemedText';
@@ -11,6 +12,7 @@ import type { ExtendedMD3Theme } from '../constants/theme';
 import { DateDisplay } from './DateDisplay';
 
 interface CardProps {
+  id: string;
   title: string;
   amount: number;
   date: string;
@@ -85,30 +87,53 @@ const getStyles = (theme: MD3Theme) => {
   });
 };
 
-export function Card({ title, amount, date, type }: CardProps) {
+export function Card({ id, title, amount, date, type }: CardProps) {
   const theme = useTheme();
+  const router = useRouter();
   const styles = getStyles(theme);
+
+  const handlePress = () => {
+    router.push({
+      pathname: '/(transaction)',
+      params: {
+        id,
+        title,
+        amount: amount.toString(),
+        type,
+      },
+    });
+  };
+
   return (
-    <ThemedView style={styles.card}>
-      <View style={styles.headerRow}>
-        <DateDisplay date={date} />
-      </View>
-      <View>
-        <ThemedText type="title" style={styles.title}>
-          {title}
-        </ThemedText>
-      </View>
-      <View style={styles.contentRow}>
-        <View style={styles.iconTitleRow}>
-          <View style={styles.iconCircle}>
-            <IconSymbol name="arrow-upward" size={28} color={theme.colors.onSurface} />
+    <TouchableOpacity onPress={handlePress}>
+      <ThemedView style={styles.card}>
+        <View style={styles.headerRow}>
+          <DateDisplay date={date} />
+        </View>
+        {title && (
+          <View>
+            <ThemedText type="title" style={styles.title}>
+              {title}
+            </ThemedText>
+          </View>
+        )}
+        <View style={styles.contentRow}>
+          <View style={styles.iconTitleRow}>
+            <View style={styles.iconCircle}>
+              <IconSymbol name="arrow-upward" size={28} color={theme.colors.onSurface} />
+            </View>
+          </View>
+          <View style={styles.amountBox}>
+            <Price
+              value={amount}
+              symbolPosition="after"
+              type="title"
+              style={styles.amountBoxText}
+            />
           </View>
         </View>
-        <View style={styles.amountBox}>
-          <Price value={amount} symbolPosition="after" type="title" style={styles.amountBoxText} />
-        </View>
-      </View>
-    </ThemedView>
+      </ThemedView>
+    </TouchableOpacity>
   );
 }
 
