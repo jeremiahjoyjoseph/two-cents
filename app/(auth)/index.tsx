@@ -17,14 +17,16 @@ export default function Auth() {
   const handleSubmit = async () => {
     try {
       if (isLogin) {
-        const response = await login(email, password);
+        const data = { email, password };
+        const response = await login(data);
         console.log('Login results:', response);
       } else {
         if (password !== confirmPassword) {
           Alert.alert('Passwords do not match');
           return;
         }
-        const response = await register(email, password, name);
+        const data = { email, password, name };
+        const response = await register(data);
         console.log('Register results:', response);
       }
     } catch (error: any) {

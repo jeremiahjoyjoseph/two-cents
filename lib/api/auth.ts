@@ -6,6 +6,9 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const loginUser = async ({ email, password }: UserLoginData) => {
   try {
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
     await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
     if (error instanceof FirebaseError) {
