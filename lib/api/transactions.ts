@@ -14,6 +14,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 
 const getTransactionPath = (userId: string, groupId: string | null) => {
@@ -106,4 +107,20 @@ export const listenToTransactions = (
     })) as Transaction[];
     onUpdate(transactions);
   });
+};
+
+export const deleteAllTransactions = async (userId: string, groupId: string | null) => {
+  const path = getTransactionPath(userId, groupId);
+  const ref = collection(firestore, path);
+
+  // Get all transactions
+  const snapshot = await getDocs(ref);
+
+  // Create a batch to delete all transactions
+  const batch = writeBatch(firestore);
+  snapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
 };
