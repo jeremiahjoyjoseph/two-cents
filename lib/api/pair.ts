@@ -269,3 +269,94 @@ export const redeemPartnerCode = async (
     throw error;
   }
 };
+
+/**
+ * Unlinks a partner group, deletes it, and moves all group transactions
+ * back to individual user transaction subcollections.
+ */
+export const unlinkPartnerAndTransferTransactions = async (
+  userA: string,
+  userB: string,
+  groupId: string
+) => {
+  const groupDoc = await getDoc(doc(firestore, 'groups', groupId));
+  if (!groupDoc.exists()) {
+    throw new Error('Group not found');
+  }
+
+  const transactionSnap = await getDocs(collection(firestore, 'groups', groupId, 'transactions'));
+  const batch = writeBatch(firestore);
+
+  // 1. Remove groupId from both users in Firestore
+  batch.update(doc(firestore, 'users', userA), { linkedGroupId: null });
+  batch.update(doc(firestore, 'users', userB), { linkedGroupId: null });
+
+  // 2. Move each transaction to both users' collections
+  transactionSnap.forEach(docSnap => {
+    const data = docSnap.data();
+    const createdBy = data.createdBy;
+    if (!createdBy) return;
+
+    // Copy to creator's collection
+    const creatorTxnRef = doc(collection(firestore, 'users', createdBy, 'transactions'));
+    batch.set(creatorTxnRef, {
+      ...data,
+      migratedFromGroupId: groupId,
+    });
+
+    // Copy to other user's collection
+    const otherUserId = createdBy === userA ? userB : userA;
+    const otherUserTxnRef = doc(collection(firestore, 'users', otherUserId, 'transactions'));
+    batch.set(otherUserTxnRef, {
+      ...data,
+      migratedFromGroupId: groupId,
+    });
+
+    batch.delete(docSnap.ref); // delete from group
+  });
+
+  // 3. Delete the group doc itself
+  batch.delete(doc(firestore, 'groups', groupId));
+
+  await batch.commit();
+};
+
+/**
+ * Handles the complete process of unlinking a partner, including fetching the group
+ * document and transferring transactions.
+ */
+export const unlinkPartner = async (
+  uid: string,
+  updateLinkedGroupId: (groupId: string | null) => void
+) => {
+  if (!uid) {
+    throw new Error('User not authenticated');
+  }
+
+  // Get the user document to find the linked group
+  const userDoc = await getDoc(doc(firestore, 'users', uid));
+  if (!userDoc.exists()) {
+    throw new Error('User not found');
+  }
+
+  const userData = userDoc.data();
+  if (!userData.linkedGroupId) {
+    throw new Error('User not linked to a group');
+  }
+
+  // Get the group document to find the other user
+  const groupDoc = await getDoc(doc(firestore, 'groups', userData.linkedGroupId));
+  if (!groupDoc.exists()) {
+    throw new Error('Group not found');
+  }
+
+  const groupData = groupDoc.data();
+  const otherUserId = groupData.userIds.find((id: string) => id !== uid);
+
+  await unlinkPartnerAndTransferTransactions(uid, otherUserId, userData.linkedGroupId);
+
+  // Update the user context
+  updateLinkedGroupId(null);
+
+  return otherUserId;
+};

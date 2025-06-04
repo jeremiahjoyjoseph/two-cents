@@ -21,12 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
-  const updateLinkedGroupId = (groupId: string | null) => {
-    if (user) {
-      setUser({ ...user, linkedGroupId: groupId });
-    }
-  };
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
       if (firebaseUser) {
@@ -70,6 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('User data updated:', userData);
     } catch (error) {
       throw new Error('Failed to update user');
+    }
+  };
+
+  const updateLinkedGroupId = (groupId: string | null) => {
+    if (user) {
+      setUser({ ...user, linkedGroupId: groupId });
     }
   };
 

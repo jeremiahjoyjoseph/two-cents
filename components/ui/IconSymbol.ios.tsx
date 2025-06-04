@@ -19,6 +19,7 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   add: 'plus',
   backspace: 'delete.left',
   delete: 'trash',
+  'link-off': 'link',
 };
 
 export function IconSymbol({
