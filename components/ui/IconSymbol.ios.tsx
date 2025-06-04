@@ -18,6 +18,7 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   'file-upload': 'arrow.up.doc',
   add: 'plus',
   backspace: 'delete.left',
+  delete: 'trash',
 };
 
 export function IconSymbol({

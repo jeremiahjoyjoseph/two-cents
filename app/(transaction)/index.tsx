@@ -7,7 +7,7 @@ import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
-import { addTransaction, updateTransaction } from '@/lib/api/transactions';
+import { addTransaction, deleteTransaction, updateTransaction } from '@/lib/api/transactions';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AmountModal from './components/AmountModal';
@@ -50,6 +50,17 @@ const styles = StyleSheet.create({
   },
   priceContainer: {
     marginVertical: 16,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
@@ -118,13 +129,20 @@ export default function Transaction() {
     setTransactionTypeModalVisible(false);
   };
 
+  const handleDelete = async () => {
+    if (!user || !transactionId) {
+      console.log('No user logged in or no transaction ID');
+      return;
+    }
+    await deleteTransaction(user.uid, user.linkedGroupId || null, transactionId);
+    router.dismiss();
+  };
+
   return (
     <>
       <SafeAreaView style={styles.container}>
         <ThemedView style={styles.mainContainer}>
-          <ThemedView
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-          >
+          <ThemedView style={styles.typeRow}>
             <TouchableOpacity
               style={[
                 styles.closeButton,
@@ -138,33 +156,38 @@ export default function Transaction() {
               <IconSymbol name="close" size={20} color={theme.colors.onSurface} />
             </TouchableOpacity>
 
-            <ThemedButton
-              mode="outlined"
-              icon={() => (
-                <IconSymbol
-                  name={
-                    selectedType === 'income'
-                      ? 'file-download'
-                      : selectedType === 'expense'
-                      ? 'file-upload'
-                      : 'swap-horiz'
-                  }
-                  size={24}
-                  color={theme.colors.onSurface}
-                />
-              )}
-              onPress={() => setTransactionTypeModalVisible(true)}
-              style={{
-                borderRadius: 30,
-                backgroundColor: theme.colors.background,
-              }}
-            >
-              {selectedType === 'income'
-                ? 'Income'
-                : selectedType === 'expense'
-                ? 'Expense'
-                : 'Transfer'}
-            </ThemedButton>
+            <ThemedView style={styles.typeRow}>
+              <ThemedButton
+                mode="outlined"
+                icon={() => (
+                  <IconSymbol
+                    name={
+                      selectedType === 'income'
+                        ? 'file-download'
+                        : selectedType === 'expense'
+                        ? 'file-upload'
+                        : 'swap-horiz'
+                    }
+                    size={24}
+                    color={theme.colors.onSurface}
+                  />
+                )}
+                onPress={() => setTransactionTypeModalVisible(true)}
+                style={{
+                  borderRadius: 30,
+                  backgroundColor: theme.colors.background,
+                }}
+              >
+                {selectedType === 'income'
+                  ? 'Income'
+                  : selectedType === 'expense'
+                  ? 'Expense'
+                  : 'Transfer'}
+              </ThemedButton>
+              <TouchableOpacity style={[styles.deleteButton]} onPress={handleDelete}>
+                <IconSymbol name="delete" size={24} color={theme.colors.error} />
+              </TouchableOpacity>
+            </ThemedView>
           </ThemedView>
 
           <TextInput
