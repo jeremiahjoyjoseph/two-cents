@@ -10,6 +10,7 @@ export type Transaction = {
   date: string;
   createdAt: Timestamp;
   createdBy: string;
+  groupId?: string | null;
 };
 
 export type TransactionInput = Omit<Transaction, 'createdAt' | 'id'>;

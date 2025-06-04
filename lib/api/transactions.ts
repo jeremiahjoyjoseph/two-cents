@@ -5,9 +5,12 @@ import {
   collection,
   deleteDoc,
   doc,
+  DocumentData,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
+  QuerySnapshot,
   Timestamp,
   updateDoc,
   where,
@@ -85,4 +88,22 @@ export const getAllTransactions = async (
     id: doc.id,
     ...doc.data(),
   })) as Transaction[];
+};
+
+export const listenToTransactions = (
+  userId: string,
+  groupId: string | null,
+  onUpdate: (transactions: Transaction[]) => void
+) => {
+  const path = getTransactionPath(userId, groupId);
+  const ref = collection(firestore, path);
+  const q = query(ref, orderBy('date', 'desc'));
+
+  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+    const transactions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Transaction[];
+    onUpdate(transactions);
+  });
 };
