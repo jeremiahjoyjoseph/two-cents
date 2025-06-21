@@ -1,6 +1,11 @@
 // src/constants/theme.ts
 
-import { MD3DarkTheme, MD3LightTheme, MD3Theme } from 'react-native-paper';
+import {
+  MD3DarkTheme,
+  MD3LightTheme,
+  MD3Theme,
+  useTheme as usePaperTheme,
+} from 'react-native-paper';
 import { Colors } from './Colors';
 
 export type ExtendedMD3Theme = MD3Theme & {
@@ -111,3 +116,5 @@ export const darkTheme: ExtendedMD3Theme = {
     },
   },
 };
+
+export const useTheme = () => usePaperTheme<ExtendedMD3Theme>();

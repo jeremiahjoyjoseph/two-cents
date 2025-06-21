@@ -8,6 +8,7 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   'chevron.left': 'chevron.left',
   'arrow-upward': 'arrow.up',
   'arrow-downward': 'arrow.down',
+  'arrow-drop-down': 'arrowtriangle.down.fill',
   close: 'xmark',
   check: 'checkmark',
   home: 'house',
