@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import Price from './Price';
 import { ThemedText } from './ThemedText';
-import { IconSymbol } from './ui/IconSymbol';
 
 interface SummaryCardProps {
   type: 'income' | 'expense';
@@ -28,11 +27,6 @@ function SummaryCard({ type, amount, currency = 'INR', selected, onSelect }: Sum
       onPress={() => onSelect?.(isSelected ? null : type)}
     >
       <View style={styles.iconLabelRow}>
-        <IconSymbol
-          name={type === 'income' ? 'arrow-downward' : 'arrow-upward'}
-          size={20}
-          color={isSelected ? theme.colors.primary : theme.colors.onSurface}
-        />
         <ThemedText
           type="defaultSemiBold"
           style={[

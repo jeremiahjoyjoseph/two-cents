@@ -91,18 +91,19 @@ const getStyles = (theme: any) =>
     },
   });
 
-const options = [
+const options: {
+  type: 'income' | 'expense';
+  label: string;
+}[] = [
   {
     type: 'income',
     label: 'Income',
-    icon: 'file-download',
   },
   {
     type: 'expense',
     label: 'Expense',
-    icon: 'file-upload',
   },
-] as const;
+];
 
 export default function TransactionTypeModal({
   isVisible,
@@ -138,12 +139,6 @@ export default function TransactionTypeModal({
               onPress={() => onSelectType(option.type)}
               activeOpacity={0.85}
             >
-              <IconSymbol
-                name={option.icon}
-                size={24}
-                color={theme.colors.onSurface}
-                style={styles.optionIcon}
-              />
               <ThemedText type="defaultSemiBold" style={{ fontSize: 18 }}>
                 {option.label}
               </ThemedText>

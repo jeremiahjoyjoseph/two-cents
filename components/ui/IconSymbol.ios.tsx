@@ -9,6 +9,7 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   'arrow-upward': 'arrow.up',
   'arrow-downward': 'arrow.down',
   'arrow-drop-down': 'arrowtriangle.down.fill',
+  'calendar-today': 'calendar',
   close: 'xmark',
   check: 'checkmark',
   home: 'house',

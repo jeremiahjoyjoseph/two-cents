@@ -17,11 +17,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const groupTransactionsByDate = (transactions: Transaction[]) => {
   return transactions.reduce((acc: { [key: string]: Transaction[] }, transaction: Transaction) => {
-    const date = transaction.date.split('T')[0];
-    if (!acc[date]) {
-      acc[date] = [];
+    // Parse the date string properly to get the date part
+    let dateKey: string;
+
+    if (transaction.date.includes('T')) {
+      // Handle ISO string format (legacy)
+      const transactionDate = new Date(transaction.date);
+      dateKey = transactionDate.toISOString().split('T')[0];
+    } else {
+      // Handle timezone-neutral format (YYYY-MM-DD)
+      dateKey = transaction.date;
     }
-    acc[date].push(transaction);
+
+    if (!acc[dateKey]) {
+      acc[dateKey] = [];
+    }
+    acc[dateKey].push(transaction);
     return acc;
   }, {});
 };
@@ -30,15 +41,41 @@ const formatDateGroup = (date: string) => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const transactionDate = new Date(date);
 
-  if (transactionDate.toDateString() === today.toDateString()) {
+  // Parse the date string properly
+  let transactionDate: Date;
+
+  if (date.includes('T')) {
+    // Handle ISO string format (legacy)
+    transactionDate = new Date(date);
+  } else {
+    // Handle timezone-neutral format (YYYY-MM-DD)
+    transactionDate = new Date(date + 'T00:00:00');
+  }
+
+  // Check if the date is valid
+  if (isNaN(transactionDate.getTime())) {
+    return 'Invalid Date';
+  }
+
+  // Compare dates by their date parts only (ignoring time)
+  const isToday =
+    transactionDate.getFullYear() === today.getFullYear() &&
+    transactionDate.getMonth() === today.getMonth() &&
+    transactionDate.getDate() === today.getDate();
+
+  const isYesterday =
+    transactionDate.getFullYear() === yesterday.getFullYear() &&
+    transactionDate.getMonth() === yesterday.getMonth() &&
+    transactionDate.getDate() === yesterday.getDate();
+
+  if (isToday) {
     return `Today, ${transactionDate.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
     })}`;
   }
-  if (transactionDate.toDateString() === yesterday.toDateString()) {
+  if (isYesterday) {
     return `Yesterday, ${transactionDate.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',

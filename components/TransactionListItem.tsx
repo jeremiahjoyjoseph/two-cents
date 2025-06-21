@@ -1,7 +1,8 @@
 import { useTheme } from '@/constants/theme';
 import { Transaction } from '@/types/transactions';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Price from './Price';
 import { ThemedText } from './ThemedText';
 import { IconSymbol } from './ui/IconSymbol';
@@ -12,39 +13,49 @@ type TransactionListItemProps = {
 
 export const TransactionListItem = ({ transaction }: TransactionListItemProps) => {
   const theme = useTheme();
-  const { title, amount, type } = transaction;
+  const router = useRouter();
+  const { id, title, amount, type, date } = transaction;
 
   const isExpense = type === 'expense';
   const iconName = isExpense ? 'arrow-downward' : 'arrow-upward';
   const iconColor = theme.colors.primary;
   const priceColor = isExpense ? theme.colors.error : theme.colors.success;
 
+  const handlePress = () => {
+    router.push({
+      pathname: '/(transaction)',
+      params: { id, title, amount, type, date },
+    });
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.left}>
-        <View style={[styles.iconContainer, { backgroundColor: `${iconColor}20` }]}>
-          <IconSymbol name={iconName} size={24} color={iconColor} />
+    <TouchableOpacity onPress={handlePress}>
+      <View style={styles.container}>
+        <View style={styles.left}>
+          <View style={[styles.iconContainer, { backgroundColor: `${iconColor}20` }]}>
+            <IconSymbol name={iconName} size={24} color={iconColor} />
+          </View>
+          <ThemedText type="defaultSemiBold">{title}</ThemedText>
         </View>
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
-      </View>
-      <View style={styles.right}>
-        {isExpense && (
-          <IconSymbol
-            name="arrow-drop-down"
-            size={Platform.select({ ios: 12, default: 24 })}
-            color={priceColor}
-            style={styles.icon}
+        <View style={styles.right}>
+          {isExpense && (
+            <IconSymbol
+              name="arrow-drop-down"
+              size={Platform.select({ ios: 12, default: 24 })}
+              color={priceColor}
+              style={styles.icon}
+            />
+          )}
+          <Price
+            value={amount}
+            symbolPosition="before"
+            type="defaultSemiBold"
+            style={{ color: priceColor }}
+            showDecimals={false}
           />
-        )}
-        <Price
-          value={amount}
-          symbolPosition="before"
-          type="defaultSemiBold"
-          style={{ color: priceColor }}
-          showDecimals={false}
-        />
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

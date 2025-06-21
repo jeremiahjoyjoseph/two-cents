@@ -1,14 +1,21 @@
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
+import { en, registerTranslation } from 'react-native-paper-dates';
 import 'react-native-reanimated';
 
 import { darkTheme, lightTheme } from '@/constants/theme';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
+
+registerTranslation('en', en);
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { user, isAuthReady } = useAuth();
@@ -71,6 +78,13 @@ export default function RootLayout() {
 function RootLayoutContent() {
   const { isAuthReady } = useAuth();
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    if (isAuthReady) {
+      // Hide the splash screen when auth is ready
+      SplashScreen.hideAsync();
+    }
+  }, [isAuthReady]);
 
   if (!isAuthReady) {
     return null;

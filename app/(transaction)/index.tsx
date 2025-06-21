@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, TextInput, useTheme } from 'react-native-paper';
+import { DatePickerModal } from 'react-native-paper-dates';
 
 import Price from '@/components/Price';
 import { ThemedButton } from '@/components/ThemedButton';
+import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,6 +64,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  datePickerButton: {
+    paddingVertical: 12,
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  dateText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
 });
 
 export default function Transaction() {
@@ -69,7 +86,7 @@ export default function Transaction() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useAuth();
-  const [isModalVisible, setModalVisible] = useState(true);
+  const [isModalVisible, setModalVisible] = useState(!params.id);
   const [amount, setAmount] = useState(params.amount?.toString() || '0');
   const [title, setTitle] = useState(params.title?.toString() || '');
   const [isTransactionTypeModalVisible, setTransactionTypeModalVisible] = useState(false);
@@ -77,22 +94,65 @@ export default function Transaction() {
     (params.type as TransactionType) || 'expense'
   );
   const [transactionId, setTransactionId] = useState<string | null>(params.id?.toString() || null);
+  const [date, setDate] = useState<string>(() => {
+    if (params.date?.toString()) {
+      // If editing existing transaction, parse the date properly
+      const existingDate = new Date(params.date.toString());
+      const year = existingDate.getFullYear();
+      const month = String(existingDate.getMonth() + 1).padStart(2, '0');
+      const day = String(existingDate.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } else {
+      // For new transactions, use today's date in timezone-neutral format
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  });
 
-  useEffect(() => {
-    // Only set initial values if they exist and haven't been set yet
-    if (params.amount && !amount) {
-      setAmount(params.amount.toString());
+  const [open, setOpen] = useState(false);
+
+  const onDismissSingle = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  const onConfirmSingle = useCallback(
+    (params: { date: Date | undefined }) => {
+      setOpen(false);
+      if (params.date) {
+        // Store date in timezone-neutral format (YYYY-MM-DD)
+        const year = params.date.getFullYear();
+        const month = String(params.date.getMonth() + 1).padStart(2, '0');
+        const day = String(params.date.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        setDate(dateString);
+      }
+    },
+    [setOpen, setDate]
+  );
+
+  const getFormattedDate = (dateString: string) => {
+    // Parse the date string (could be YYYY-MM-DD or ISO string)
+    const dateObj = new Date(dateString);
+    const today = new Date();
+
+    // Compare dates by their date parts only (ignoring time)
+    const isToday =
+      dateObj.getFullYear() === today.getFullYear() &&
+      dateObj.getMonth() === today.getMonth() &&
+      dateObj.getDate() === today.getDate();
+
+    if (isToday) {
+      return 'Today';
     }
-    if (params.title && !title) {
-      setTitle(params.title.toString());
-    }
-    if (params.type && selectedType === 'expense') {
-      setSelectedType(params.type as TransactionType);
-    }
-    if (params.id && !transactionId) {
-      setTransactionId(params.id.toString());
-    }
-  }, []); // Empty dependency array means this only runs once on mount
+    return dateObj.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
 
   const handleSubmit = async (amount: string) => {
     if (!user) {
@@ -104,7 +164,7 @@ export default function Transaction() {
       type: selectedType,
       amount: parseFloat(amount),
       title: title,
-      date: new Date().toISOString(),
+      date: date,
       createdBy: user.uid,
     };
 
@@ -159,19 +219,6 @@ export default function Transaction() {
             <ThemedView style={styles.typeRow}>
               <ThemedButton
                 mode="outlined"
-                icon={() => (
-                  <IconSymbol
-                    name={
-                      selectedType === 'income'
-                        ? 'file-download'
-                        : selectedType === 'expense'
-                        ? 'file-upload'
-                        : 'swap-horiz'
-                    }
-                    size={24}
-                    color={theme.colors.onSurface}
-                  />
-                )}
                 onPress={() => setTransactionTypeModalVisible(true)}
                 style={{
                   borderRadius: 30,
@@ -213,12 +260,19 @@ export default function Transaction() {
             placeholderTextColor={theme.colors.onSurfaceDisabled}
           />
 
+          <TouchableOpacity onPress={() => setOpen(true)} style={styles.datePickerButton}>
+            <View style={styles.datePickerContent}>
+              <IconSymbol name="calendar-today" size={24} color={theme.colors.primary} />
+              <ThemedText style={styles.dateText}>{getFormattedDate(date)}</ThemedText>
+            </View>
+          </TouchableOpacity>
+
           <ThemedView style={styles.bottomSection}>
             <TouchableOpacity style={styles.priceContainer} onPress={() => setModalVisible(true)}>
               <Price value={parseFloat(amount)} type="title" style={styles.amountText} />
             </TouchableOpacity>
             <Button mode="contained" onPress={() => handleSubmit(amount)} style={styles.addButton}>
-              Submit
+              {transactionId ? 'Save' : 'Submit'}
             </Button>
           </ThemedView>
         </ThemedView>
@@ -235,6 +289,14 @@ export default function Transaction() {
         selectedType={selectedType}
         onSelectType={setSelectedType}
         onSet={handleSetType}
+      />
+      <DatePickerModal
+        locale="en"
+        mode="single"
+        visible={open}
+        onDismiss={onDismissSingle}
+        date={new Date(date + 'T00:00:00')}
+        onConfirm={onConfirmSingle}
       />
     </>
   );
