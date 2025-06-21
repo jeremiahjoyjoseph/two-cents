@@ -3,7 +3,7 @@ import { HandleLinkingPartnerCode } from '@/components/HandleLinkingPartnerCode'
 import { HandleUnlinkPartnerCode } from '@/components/HandleUnlinkPartnerCode';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
-import { MenuItem } from '@/components/ui/MenuItem';
+import { SettingsButton } from '@/components/ui/SettingsButton';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteAllTransactions } from '@/lib/api/transactions';
@@ -123,20 +123,66 @@ export default function Profile() {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ParallaxScrollView>
         <View style={styles.header}>
-          <ThemedText type="title">Profile</ThemedText>
+          <ThemedText type="title">Settings</ThemedText>
           {user?.name && <ThemedText type="subtitle">{user.name}</ThemedText>}
         </View>
-        <MenuItem label="Sign Out" onPress={() => handleSignOut()} />
-        {!user?.linkedGroupId ? (
-          <>
-            <MenuItem label="Generate Partner Code" onPress={() => handleGeneratePartnerCode()} />
-            <MenuItem label="Link Partner Code" onPress={() => handleLinkPartnerCode()} />
-          </>
-        ) : (
-          <MenuItem label="Unlink Partner Code" onPress={() => handleUnlinkPartnerCode()} />
-        )}
-        <MenuItem label="Delete Data" onPress={() => handleDeleteData()} />
-        <MenuItem label="Delete Account" onPress={() => handleDeleteAccount()} />
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Account
+          </ThemedText>
+          <SettingsButton
+            title="Sign Out"
+            icon="logout"
+            onPress={handleSignOut}
+            color={theme.colors.tertiary}
+          />
+          <SettingsButton
+            title="Delete Account"
+            icon="delete-forever"
+            onPress={handleDeleteAccount}
+            color={theme.colors.error}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Partner
+          </ThemedText>
+          {!user?.linkedGroupId ? (
+            <>
+              <SettingsButton
+                title="Generate Partner Code"
+                icon="qr-code-scanner"
+                onPress={handleGeneratePartnerCode}
+              />
+              <SettingsButton
+                title="Link with Partner"
+                icon="link"
+                onPress={handleLinkPartnerCode}
+              />
+            </>
+          ) : (
+            <SettingsButton
+              title="Unlink from Partner"
+              icon="link-off"
+              onPress={handleUnlinkPartnerCode}
+              color={theme.colors.error}
+            />
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Data
+          </ThemedText>
+          <SettingsButton
+            title="Delete All Data"
+            icon="delete"
+            onPress={handleDeleteData}
+            color={theme.colors.error}
+          />
+        </View>
       </ParallaxScrollView>
 
       <GeneratePartnerCodeModal
@@ -159,6 +205,12 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 16,
+    marginBottom: 24,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    marginBottom: 12,
   },
 });
