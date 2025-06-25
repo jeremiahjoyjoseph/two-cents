@@ -40,7 +40,15 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
         <View style={styles.right}>
           {isExpense && (
             <IconSymbol
-              name="arrow-drop-down"
+              name="keyboard-arrow-down"
+              size={Platform.select({ ios: 12, default: 24 })}
+              color={priceColor}
+              style={styles.icon}
+            />
+          )}
+          {!isExpense && (
+            <IconSymbol
+              name="keyboard-arrow-up"
               size={Platform.select({ ios: 12, default: 24 })}
               color={priceColor}
               style={styles.icon}

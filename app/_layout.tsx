@@ -1,5 +1,5 @@
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { ThemeProvider, useThemeMode } from '@/contexts/ThemeContext';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -21,7 +21,7 @@ function RootLayoutNav() {
   const { user, isAuthReady } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { isDark } = useThemeMode();
 
   useEffect(() => {
     if (!isAuthReady) return;
@@ -44,8 +44,7 @@ function RootLayoutNav() {
         headerShown: false,
         animation: 'slide_from_right',
         contentStyle: {
-          backgroundColor:
-            colorScheme === 'dark' ? darkTheme.colors.background : lightTheme.colors.background,
+          backgroundColor: isDark ? darkTheme.colors.background : lightTheme.colors.background,
         },
       }}
     />
@@ -53,7 +52,6 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -61,23 +59,17 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor:
-          colorScheme === 'dark' ? darkTheme.colors.background : lightTheme.colors.background,
-      }}
-    >
+    <ThemeProvider>
       <AuthProvider>
         <RootLayoutContent />
       </AuthProvider>
-    </View>
+    </ThemeProvider>
   );
 }
 
 function RootLayoutContent() {
   const { isAuthReady } = useAuth();
-  const colorScheme = useColorScheme();
+  const { isDark } = useThemeMode();
 
   useEffect(() => {
     if (isAuthReady) {
@@ -91,9 +83,16 @@ function RootLayoutContent() {
   }
 
   return (
-    <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
-      <RootLayoutNav />
-      <StatusBar style="auto" />
-    </PaperProvider>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: isDark ? darkTheme.colors.background : lightTheme.colors.background,
+      }}
+    >
+      <PaperProvider theme={isDark ? darkTheme : lightTheme}>
+        <RootLayoutNav />
+        <StatusBar style="auto" />
+      </PaperProvider>
+    </View>
   );
 }

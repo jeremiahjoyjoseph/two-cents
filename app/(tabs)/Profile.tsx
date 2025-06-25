@@ -4,6 +4,7 @@ import { HandleUnlinkPartnerCode } from '@/components/HandleUnlinkPartnerCode';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { SettingsButton } from '@/components/ui/SettingsButton';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteAllTransactions } from '@/lib/api/transactions';
@@ -131,18 +132,19 @@ export default function Profile() {
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Account
           </ThemedText>
-          <SettingsButton
-            title="Sign Out"
-            icon="logout"
-            onPress={handleSignOut}
-            color={theme.colors.tertiary}
-          />
+          <SettingsButton title="Sign Out" icon="logout" onPress={handleSignOut} />
           <SettingsButton
             title="Delete Account"
             icon="delete-forever"
             onPress={handleDeleteAccount}
-            color={theme.colors.error}
           />
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Theme
+          </ThemedText>
+          <ThemeToggle />
         </View>
 
         <View style={styles.section}>
@@ -167,21 +169,29 @@ export default function Profile() {
               title="Unlink from Partner"
               icon="link-off"
               onPress={handleUnlinkPartnerCode}
-              color={theme.colors.error}
             />
           )}
         </View>
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Data
+            Import
           </ThemedText>
           <SettingsButton
-            title="Delete All Data"
-            icon="delete"
-            onPress={handleDeleteData}
-            color={theme.colors.error}
+            title="Import from Cashew"
+            icon="file-upload"
+            onPress={() => {
+              // TODO: Implement Cashew import functionality
+              Alert.alert('Coming Soon', 'Import from Cashew feature will be available soon.');
+            }}
           />
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Data
+          </ThemedText>
+          <SettingsButton title="Delete All Data" icon="delete" onPress={handleDeleteData} />
         </View>
       </ParallaxScrollView>
 

@@ -39,12 +39,12 @@ const getStyles = (theme: MD3Theme) =>
       paddingVertical: 32,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.elevation.level3,
+      backgroundColor: theme.colors.elevation.level1,
     },
     keypadContainer: {
       paddingHorizontal: 24,
       paddingBottom: 16,
-      backgroundColor: theme.colors.elevation.level3,
+      backgroundColor: theme.colors.elevation.level1,
     },
     keypadRow: {
       flexDirection: 'row',
@@ -77,7 +77,7 @@ const getStyles = (theme: MD3Theme) =>
       paddingVertical: 16,
       borderTopWidth: 1,
       borderTopColor: theme.colors.outline,
-      backgroundColor: theme.colors.elevation.level3,
+      backgroundColor: theme.colors.elevation.level1,
     },
     enterButton: {
       paddingHorizontal: 24,
