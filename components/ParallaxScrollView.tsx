@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from 'react';
-import { RefreshControlProps, StyleSheet } from 'react-native';
+import { RefreshControlProps, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import Animated, {
   interpolate,
@@ -16,9 +16,17 @@ const HEADER_HEIGHT = 250;
 type Props = PropsWithChildren<{
   headerImage?: ReactElement;
   refreshControl?: ReactElement<RefreshControlProps>;
+  style?: ViewStyle;
+  onScroll?: (event: any) => void;
 }>;
 
-export default function ParallaxScrollView({ children, headerImage, refreshControl }: Props) {
+export default function ParallaxScrollView({
+  children,
+  headerImage,
+  refreshControl,
+  style,
+  onScroll,
+}: Props) {
   const theme = useTheme();
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollViewOffset(scrollRef);
@@ -46,8 +54,9 @@ export default function ParallaxScrollView({ children, headerImage, refreshContr
         ref={scrollRef}
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ bottom }}
-        contentContainerStyle={{ paddingBottom: bottom }}
+        contentContainerStyle={[{ paddingBottom: bottom }, style]}
         refreshControl={refreshControl}
+        onScroll={onScroll}
       >
         {headerImage && (
           <Animated.View

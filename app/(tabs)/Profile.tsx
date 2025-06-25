@@ -4,6 +4,7 @@ import { HandleUnlinkPartnerCode } from '@/components/HandleUnlinkPartnerCode';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { SettingsButton } from '@/components/ui/SettingsButton';
+import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +22,7 @@ export default function Profile() {
   const [isLinkingPartnerCodeModalVisible, setIsLinkingPartnerCodeModalVisible] = useState(false);
   const [isUnlinkingPartnerCodeModalVisible, setIsUnlinkingPartnerCodeModalVisible] =
     useState(false);
+  const tabBarHeight = useBottomTabOverflow();
 
   const handleSignOut = () => {
     signOut(auth);
@@ -122,7 +124,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ParallaxScrollView>
+      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + 20 }}>
         <View style={styles.header}>
           <ThemedText type="title">Settings</ThemedText>
           {user?.name && <ThemedText type="subtitle">{user.name}</ThemedText>}

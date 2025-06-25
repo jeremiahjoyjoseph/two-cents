@@ -11,9 +11,10 @@ import { Transaction } from '@/types/transactions';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { FAB, useTheme } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import MonthRangeModal from '../../components/MonthRangeModal';
 
 const groupTransactionsByDate = (transactions: Transaction[]) => {
   return transactions.reduce((acc: { [key: string]: Transaction[] }, transaction: Transaction) => {
@@ -98,23 +99,74 @@ export default function Home() {
   );
   const [selectedType, setSelectedType] = useState<'income' | 'expense' | null>(null);
   const tabBarHeight = useBottomTabBarHeight();
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const insets = useSafeAreaInsets();
+  const [monthModalVisible, setMonthModalVisible] = useState(false);
+
+  const months = React.useMemo(() => {
+    const arr = [];
+    const start = new Date(2024, 0, 1);
+    const end = new Date(2026, 11, 1);
+    let current = new Date(start);
+    while (current <= end) {
+      arr.push(new Date(current));
+      current.setMonth(current.getMonth() + 1);
+    }
+    return arr;
+  }, []);
+  const now = new Date();
+  const currentMonthIndex = months.findIndex(
+    m => m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth()
+  );
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number | null>(null);
+  const [allTimeSelected, setAllTimeSelected] = useState(true);
+
+  // Month label for sticky header
+  let monthLabel = '';
+  if (allTimeSelected) {
+    monthLabel = `To ${now.toLocaleString('default', { month: 'short', day: '2-digit' })}`;
+  } else if (selectedMonthIdx !== null && months[selectedMonthIdx]) {
+    const date = months[selectedMonthIdx];
+    const isCurrentYear = date.getFullYear() === now.getFullYear();
+    monthLabel = isCurrentYear
+      ? date.toLocaleString('default', { month: 'long' })
+      : `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
+  }
+
+  // Filter transactions by month or all time
+  const filteredTransactions = React.useMemo(() => {
+    if (allTimeSelected) return transactions;
+    if (selectedMonthIdx === null || !months[selectedMonthIdx]) return transactions;
+    const selectedDate = months[selectedMonthIdx];
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    return transactions.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate.getFullYear() === year && tDate.getMonth() === month;
+    });
+  }, [transactions, allTimeSelected, selectedMonthIdx, months]);
 
   const getTotalExpense = () => {
-    return transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    return filteredTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
   };
 
   const getTotalIncome = () => {
-    return transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    return filteredTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
   };
-
-  const filteredTransactions = selectedType
-    ? transactions.filter(t => t.type === selectedType)
-    : transactions;
 
   const groupedTransactions = groupTransactionsByDate(filteredTransactions);
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => {
     return new Date(b).getTime() - new Date(a).getTime();
   });
+
+  const handleScroll = (event: any) => {
+    const y = event.nativeEvent.contentOffset.y;
+    setShowStickyHeader(y > 60); // Adjust threshold as needed
+  };
 
   if (loading) {
     return (
@@ -126,7 +178,47 @@ export default function Home() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ParallaxScrollView>
+      {showStickyHeader && (
+        <View
+          style={[
+            styles.stickyHeader,
+            {
+              backgroundColor: theme.colors.background,
+              paddingTop: insets.top + 8,
+              borderBottomColor: theme.colors.surfaceVariant,
+            },
+          ]}
+        >
+          <View>
+            <ThemedText style={styles.stickyHeaderCurrency}>INR</ThemedText>
+            <ThemedText style={styles.stickyHeaderAmount}>
+              {(getTotalIncome() - getTotalExpense()).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+              })}
+            </ThemedText>
+          </View>
+          {/* Month selector button triggers modal */}
+          <TouchableOpacity
+            onPress={() => setMonthModalVisible(true)}
+            style={[
+              styles.stickyHeaderMonthButton,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+          >
+            <IconSymbol name="calendar-today" size={20} color={theme.colors.onSurface} />
+            <ThemedText style={[styles.stickyHeaderMonthText, { color: theme.colors.onSurface }]}>
+              {monthLabel}
+            </ThemedText>
+            <IconSymbol
+              name="keyboard-arrow-down"
+              size={20}
+              color={theme.colors.onSurface}
+              style={styles.stickyHeaderMonthIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
+      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + 20 }} onScroll={handleScroll}>
         <ThemedView style={styles.container}>
           <Price
             value={getTotalIncome() - getTotalExpense()}
@@ -140,6 +232,26 @@ export default function Home() {
           selected={selectedType}
           onSelect={setSelectedType}
         />
+        <View style={styles.monthPickerContainer}>
+          <TouchableOpacity
+            onPress={() => setMonthModalVisible(true)}
+            style={[
+              styles.stickyHeaderMonthButton,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+          >
+            <IconSymbol name="calendar-today" size={20} color={theme.colors.onSurface} />
+            <ThemedText style={[styles.stickyHeaderMonthText, { color: theme.colors.onSurface }]}>
+              {monthLabel}
+            </ThemedText>
+            <IconSymbol
+              name="keyboard-arrow-down"
+              size={20}
+              color={theme.colors.onSurface}
+              style={styles.stickyHeaderMonthIcon}
+            />
+          </TouchableOpacity>
+        </View>
         {sortedDates.map(date => {
           const dailyTotal = groupedTransactions[date].reduce((sum: number, t: Transaction) => {
             return sum + (t.type === 'income' ? t.amount : -t.amount);
@@ -178,11 +290,20 @@ export default function Home() {
           styles.fab,
           {
             backgroundColor: theme.colors.secondary,
-            bottom: tabBarHeight + 16,
+            bottom: tabBarHeight + 4,
           },
         ]}
         onPress={() => router.push('/(transaction)')}
         color={theme.colors.onSecondary}
+      />
+      {/* Month/Range Modal */}
+      <MonthRangeModal
+        isVisible={monthModalVisible}
+        onClose={() => setMonthModalVisible(false)}
+        selectedMonthIdx={selectedMonthIdx}
+        setSelectedMonthIdx={setSelectedMonthIdx}
+        allTimeSelected={allTimeSelected}
+        setAllTimeSelected={setAllTimeSelected}
       />
     </SafeAreaView>
   );
@@ -220,5 +341,44 @@ const styles = StyleSheet.create({
         elevation: 5,
       },
     }),
+  },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+  },
+  stickyHeaderCurrency: {
+    fontSize: 16,
+    opacity: 0.6,
+  },
+  stickyHeaderAmount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  stickyHeaderMonthButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  stickyHeaderMonthText: {
+    marginLeft: 8,
+    fontWeight: 'bold',
+  },
+  stickyHeaderMonthIcon: {
+    marginLeft: 8,
+  },
+  monthPickerContainer: {
+    marginTop: 0,
+    alignItems: 'flex-start',
   },
 });

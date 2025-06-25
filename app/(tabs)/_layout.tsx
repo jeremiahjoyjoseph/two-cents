@@ -5,9 +5,16 @@ import { useTheme } from 'react-native-paper';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { TabBarButton } from '@/components/ui/TabBarButton';
+import { Colors } from '@/constants/Colors';
+import { useThemeMode } from '@/contexts/ThemeContext';
 
 export default function TabLayout() {
   const theme = useTheme();
+  const { isDark } = useThemeMode();
+
+  const tabBarBackgroundColor = isDark
+    ? `${Colors.dark.background}CC` // 80% opacity
+    : `${Colors.light.background}CC`; // 80% opacity
 
   return (
     <Tabs
@@ -18,8 +25,8 @@ export default function TabLayout() {
           position: 'absolute',
           borderTopWidth: 0,
           elevation: 0,
-          backgroundColor: 'transparent',
-          height: 100,
+          backgroundColor: tabBarBackgroundColor,
+          height: 80,
         },
       }}
     >
