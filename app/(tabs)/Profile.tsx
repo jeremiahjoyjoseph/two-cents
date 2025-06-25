@@ -1,3 +1,4 @@
+import { CashewImportModal } from '@/components/CashewImportModal';
 import { GeneratePartnerCodeModal } from '@/components/GeneratePartnerCodeModal';
 import { HandleLinkingPartnerCode } from '@/components/HandleLinkingPartnerCode';
 import { HandleUnlinkPartnerCode } from '@/components/HandleUnlinkPartnerCode';
@@ -22,6 +23,7 @@ export default function Profile() {
   const [isLinkingPartnerCodeModalVisible, setIsLinkingPartnerCodeModalVisible] = useState(false);
   const [isUnlinkingPartnerCodeModalVisible, setIsUnlinkingPartnerCodeModalVisible] =
     useState(false);
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const tabBarHeight = useBottomTabOverflow();
 
   const handleSignOut = () => {
@@ -38,6 +40,10 @@ export default function Profile() {
 
   const handleUnlinkPartnerCode = () => {
     setIsUnlinkingPartnerCodeModalVisible(true);
+  };
+
+  const handleImportFromCashew = () => {
+    setIsImportModalVisible(true);
   };
 
   const handleDeleteData = async () => {
@@ -181,11 +187,8 @@ export default function Profile() {
           </ThemedText>
           <SettingsButton
             title="Import from Cashew"
-            icon="file-upload"
-            onPress={() => {
-              // TODO: Implement Cashew import functionality
-              Alert.alert('Coming Soon', 'Import from Cashew feature will be available soon.');
-            }}
+            icon="file-download"
+            onPress={handleImportFromCashew}
           />
         </View>
 
@@ -210,6 +213,11 @@ export default function Profile() {
       <HandleUnlinkPartnerCode
         visible={isUnlinkingPartnerCodeModalVisible}
         onDismiss={() => setIsUnlinkingPartnerCodeModalVisible(false)}
+      />
+
+      <CashewImportModal
+        visible={isImportModalVisible}
+        onDismiss={() => setIsImportModalVisible(false)}
       />
     </SafeAreaView>
   );

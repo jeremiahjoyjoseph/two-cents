@@ -2,7 +2,7 @@ import { useTheme } from '@/constants/theme';
 import { Transaction } from '@/types/transactions';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Price from './Price';
 import { ThemedText } from './ThemedText';
 import { IconSymbol } from './ui/IconSymbol';
@@ -17,7 +17,7 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
   const { id, title, amount, type, date } = transaction;
 
   const isExpense = type === 'expense';
-  const iconName = isExpense ? 'arrow-downward' : 'arrow-upward';
+  const iconName = isExpense ? 'arrow-upward' : 'arrow-downward';
   const iconColor = theme.colors.primary;
   const priceColor = isExpense ? theme.colors.error : theme.colors.success;
 
@@ -35,10 +35,17 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
           <View style={[styles.iconContainer, { backgroundColor: `${iconColor}20` }]}>
             <IconSymbol name={iconName} size={24} color={iconColor} />
           </View>
-          <ThemedText type="defaultSemiBold">{title}</ThemedText>
+          <ThemedText
+            type="defaultSemiBold"
+            style={styles.title}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {title}
+          </ThemedText>
         </View>
         <View style={styles.right}>
-          {isExpense && (
+          {/* {isExpense && (
             <IconSymbol
               name="keyboard-arrow-down"
               size={Platform.select({ ios: 12, default: 24 })}
@@ -53,7 +60,7 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
               color={priceColor}
               style={styles.icon}
             />
-          )}
+          )} */}
           <Price
             value={amount}
             symbolPosition="before"
@@ -78,7 +85,7 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    flex: 1,
   },
   right: {
     flexDirection: 'row',
@@ -96,5 +103,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
+    flexShrink: 1,
+    flexGrow: 1,
+    minWidth: 0,
+    flexWrap: 'wrap',
+    marginLeft: 12,
   },
 });
