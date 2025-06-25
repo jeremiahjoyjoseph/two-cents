@@ -8,32 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - [Add new features here]
 
 ### Changed
+
 - [Add changes here]
 
 ### Fixed
+
 - [Add bug fixes here]
 
 ### Removed
+
 - [Add removed features here]
 
-## [1.1.0] - 2025-06-26
+## [1.1.1] - 2025-06-26
 
 ### Added
-- [Add new features here]
+
+- Version display component in profile page with build number support
 
 ### Changed
-- [Add changes here]
 
-### Fixed
-- [Add bug fixes here]
+- Enhanced version text styling with bold font weight
+- Improved profile page layout with additional padding for version display
 
-### Removed
-- [Add removed features here]
-
-
+## [1.1.0] - 2025-06-26
 
 ### Added
 
