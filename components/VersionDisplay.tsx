@@ -37,6 +37,7 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 12,
     opacity: 0.7,
+    fontWeight: 'bold',
   },
   buildText: {
     fontSize: 10,

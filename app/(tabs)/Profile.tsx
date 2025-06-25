@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { SettingsButton } from '@/components/ui/SettingsButton';
 import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { VersionDisplay } from '@/components/VersionDisplay';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteAllTransactions } from '@/lib/api/transactions';
@@ -130,7 +131,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + 20 }}>
+      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + 48 }}>
         <View style={styles.header}>
           <ThemedText type="title">Settings</ThemedText>
           {user?.name && <ThemedText type="subtitle">{user.name}</ThemedText>}
@@ -197,6 +198,10 @@ export default function Profile() {
             Data
           </ThemedText>
           <SettingsButton title="Delete All Data" icon="delete" onPress={handleDeleteData} />
+        </View>
+
+        <View style={styles.section}>
+          <VersionDisplay showBuildNumber={true} />
         </View>
       </ParallaxScrollView>
 
