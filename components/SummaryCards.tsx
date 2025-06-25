@@ -21,7 +21,7 @@ function SummaryCard({ type, amount, currency = 'INR', selected, onSelect }: Sum
       style={[
         styles.card,
         {
-          backgroundColor: isSelected ? theme.colors.secondary : theme.colors.surfaceVariant,
+          backgroundColor: isSelected ? theme.colors.primary : theme.colors.surfaceVariant,
         },
       ]}
       onPress={() => onSelect?.(isSelected ? null : type)}
@@ -31,7 +31,7 @@ function SummaryCard({ type, amount, currency = 'INR', selected, onSelect }: Sum
           type="defaultSemiBold"
           style={[
             styles.label,
-            { color: isSelected ? theme.colors.primary : theme.colors.onSurface },
+            { color: isSelected ? theme.colors.onPrimary : theme.colors.onSurface },
           ]}
         >
           {type === 'income' ? 'Income' : 'Expenses'}
@@ -42,7 +42,7 @@ function SummaryCard({ type, amount, currency = 'INR', selected, onSelect }: Sum
         currency={currency}
         type="defaultSemiBold"
         style={{
-          color: isSelected ? theme.colors.primary : theme.colors.onSurface,
+          color: isSelected ? theme.colors.onPrimary : theme.colors.onSurface,
           marginTop: 8,
         }}
       />

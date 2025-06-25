@@ -91,7 +91,7 @@ function RootLayoutContent() {
     >
       <PaperProvider theme={isDark ? darkTheme : lightTheme}>
         <RootLayoutNav />
-        <StatusBar style="auto" />
+        <StatusBar style={isDark ? 'light' : 'dark'} translucent />
       </PaperProvider>
     </View>
   );
