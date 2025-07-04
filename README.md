@@ -10,6 +10,51 @@ Two Cents is a collaborative finance tracking app for couples and partners. It a
 
 Built with Expo, React Native, and Firebase.
 
+## 📱 Downloads
+
+### Latest Release
+
+- **Android**: [Download Android App](https://expo.dev/artifacts/eas/[BUILD_ID].apk) _(Coming Soon)_
+
+### iOS Distribution
+
+iOS builds are available for internal testing through TestFlight or can be distributed via Expo's internal distribution system. Contact the development team for access.
+
+### Previous Releases
+
+Check our [releases page](https://github.com/[your-username]/two-cents/releases) for older versions.
+
+> **Note**: Android download links will be updated after each successful build. To get the latest builds, run `npm run build` and check the Expo dashboard for the download URLs.
+
+## 🏗️ Building
+
+### Prerequisites
+
+1. Install EAS CLI: `npm install -g @expo/eas-cli`
+2. Login to Expo: `eas login`
+3. Configure your project: `eas build:configure`
+
+### Build Commands
+
+```bash
+# Build for all platforms (iOS & Android)
+npm run build
+
+# Build for specific platforms
+npm run build:ios
+npm run build:android
+
+# Build preview versions (for testing)
+npm run build:preview
+```
+
+### Build Process
+
+1. Run `npm run build` to start the build process
+2. Monitor build progress at: https://expo.dev/accounts/[your-username]/projects/two-cents/builds
+3. Once complete, download links will be available in the Expo dashboard
+4. Update the download links in this README using: `npm run update-links`
+
 ## Version Management
 
 This project uses semantic versioning and includes tools for managing versions and releases.

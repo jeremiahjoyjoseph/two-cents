@@ -17,7 +17,13 @@
     "version:set": "node scripts/version.js set",
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
-    "release:major": "node scripts/release.js major"
+    "release:major": "node scripts/release.js major",
+    "build:ios": "eas build --platform ios",
+    "build:android": "eas build --platform android",
+    "build:all": "eas build --platform all",
+    "build:preview": "eas build --profile preview --platform all",
+    "build": "node scripts/build.js",
+    "update-links": "node scripts/update-download-links.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
