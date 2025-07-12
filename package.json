@@ -17,13 +17,7 @@
     "version:set": "node scripts/version.js set",
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
-    "release:major": "node scripts/release.js major",
-    "build:ios": "eas build --platform ios",
-    "build:android": "eas build --platform android",
-    "build:all": "eas build --platform all",
-    "build:preview": "eas build --profile preview --platform all",
-    "build": "node scripts/build.js",
-    "update-links": "node scripts/update-download-links.js"
+    "release:major": "node scripts/release.js major"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -58,7 +52,8 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-web": "~0.20.0"
+    "react-native-web": "~0.20.0",
+    "expo-dev-client": "~5.2.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
