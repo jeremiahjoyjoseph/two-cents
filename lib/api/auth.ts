@@ -1,4 +1,5 @@
 import { auth, firestore } from '@/config/firebase';
+import { generateKeyPair, storePrivateKey, storePublicKey } from '@/lib/crypto/encryption';
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
 import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
@@ -25,11 +26,23 @@ export const registerUser = async ({
 }: UserRegistrationData): Promise<UserResponse> => {
   try {
     const response = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Generate encryption key pair for the new user
+    const keyPair = await generateKeyPair();
+
+    // Store private key securely on device
+    await storePrivateKey(keyPair.privateKey);
+
+    // Store public key in secure storage for backup
+    await storePublicKey(keyPair.publicKey);
+
     const userData = {
       name,
       email,
       uid: response.user.uid,
+      publicKey: keyPair.publicKey, // Store public key in Firestore
     };
+
     await setDoc(doc(firestore, 'users', response.user.uid), userData);
     return { success: true, user: userData, status: 200 };
   } catch (error) {

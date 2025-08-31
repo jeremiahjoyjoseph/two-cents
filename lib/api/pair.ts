@@ -1,4 +1,6 @@
 import { firestore } from '@/config/firebase';
+import { decryptGroupKey, decryptTransaction } from '@/lib/crypto/encryption';
+import { EncryptedTransaction } from '@/types/transactions';
 import {
   addDoc,
   collection,
@@ -284,6 +286,7 @@ export const unlinkPartnerAndTransferTransactions = async (
     throw new Error('Group not found');
   }
 
+  const groupData = groupDoc.data();
   const transactionSnap = await getDocs(collection(firestore, 'groups', groupId, 'transactions'));
   const batch = writeBatch(firestore);
 
@@ -291,29 +294,53 @@ export const unlinkPartnerAndTransferTransactions = async (
   batch.update(doc(firestore, 'users', userA), { linkedGroupId: null });
   batch.update(doc(firestore, 'users', userB), { linkedGroupId: null });
 
-  // 2. Move each transaction to both users' collections
-  transactionSnap.forEach(docSnap => {
-    const data = docSnap.data();
-    const createdBy = data.createdBy;
-    if (!createdBy) return;
+  // 2. Move each encrypted transaction to both users' collections (decrypted)
+  for (const docSnap of transactionSnap.docs) {
+    const encryptedData = docSnap.data() as EncryptedTransaction;
+    const createdBy = encryptedData.createdBy;
+    if (!createdBy) continue;
 
-    // Copy to creator's collection
-    const creatorTxnRef = doc(collection(firestore, 'users', createdBy, 'transactions'));
-    batch.set(creatorTxnRef, {
-      ...data,
-      migratedFromGroupId: groupId,
-    });
+    // Decrypt the transaction using the appropriate user's encrypted group key
+    const encryptedGroupKeyA = groupData.encryptedGroupKeys[userA];
+    const encryptedGroupKeyB = groupData.encryptedGroupKeys[userB];
 
-    // Copy to other user's collection
-    const otherUserId = createdBy === userA ? userB : userA;
-    const otherUserTxnRef = doc(collection(firestore, 'users', otherUserId, 'transactions'));
-    batch.set(otherUserTxnRef, {
-      ...data,
-      migratedFromGroupId: groupId,
-    });
+    if (!encryptedGroupKeyA || !encryptedGroupKeyB) {
+      console.error('Encrypted group keys not found for users');
+      continue;
+    }
 
-    batch.delete(docSnap.ref); // delete from group
-  });
+    try {
+      // Decrypt using user A's private key
+      const groupKeyA = await decryptGroupKey(encryptedGroupKeyA);
+      const decryptedDataA = decryptTransaction(encryptedData, groupKeyA);
+
+      // Decrypt using user B's private key
+      const groupKeyB = await decryptGroupKey(encryptedGroupKeyB);
+      const decryptedDataB = decryptTransaction(encryptedData, groupKeyB);
+
+      // Copy to creator's collection (decrypted)
+      const creatorTxnRef = doc(collection(firestore, 'users', createdBy, 'transactions'));
+      batch.set(creatorTxnRef, {
+        ...decryptedDataA,
+        migratedFromGroupId: groupId,
+      });
+
+      // Copy to other user's collection (decrypted)
+      const otherUserId = createdBy === userA ? userB : userA;
+      const otherUserTxnRef = doc(collection(firestore, 'users', otherUserId, 'transactions'));
+      batch.set(otherUserTxnRef, {
+        ...decryptedDataB,
+        migratedFromGroupId: groupId,
+      });
+
+      // Delete from group
+      batch.delete(docSnap.ref);
+    } catch (error) {
+      console.error('Error decrypting transaction during unlink:', error);
+      // If decryption fails, skip this transaction
+      continue;
+    }
+  }
 
   // 3. Delete the group doc itself
   batch.delete(doc(firestore, 'groups', groupId));

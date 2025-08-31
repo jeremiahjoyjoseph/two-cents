@@ -3,6 +3,7 @@ export type User = {
   email: string;
   name?: string;
   linkedGroupId?: string | null;
+  publicKey?: string; // Public key for encryption
   createdAt?: string; // ISO or Timestamp
 };
 
