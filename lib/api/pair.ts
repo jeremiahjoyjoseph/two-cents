@@ -1,5 +1,7 @@
 import { firestore } from '@/config/firebase';
 import { deleteAllTransactions } from '@/lib/api/transactions';
+import { getPersonalKey } from '@/lib/utils';
+import * as Crypto from 'expo-crypto';
 import {
   addDoc,
   collection,
@@ -16,6 +18,86 @@ import {
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const MAX_ATTEMPTS = 5; // Prevent infinite loops
+
+/**
+ * Encrypt a group key using a user's personal key
+ */
+const encryptGroupKey = async (groupKey: string, personalKey: string): Promise<string> => {
+  const groupKeyBytes = new Uint8Array(groupKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+  const personalKeyBytes = new Uint8Array(
+    personalKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+  );
+
+  const encrypted = new Uint8Array(groupKeyBytes.length);
+  for (let i = 0; i < groupKeyBytes.length; i++) {
+    encrypted[i] = groupKeyBytes[i] ^ personalKeyBytes[i % personalKeyBytes.length];
+  }
+
+  return Array.from(encrypted, byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * Decrypt a group key using a user's personal key
+ */
+const decryptGroupKey = async (encryptedGroupKey: string, personalKey: string): Promise<string> => {
+  const encryptedBytes = new Uint8Array(
+    encryptedGroupKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+  );
+  const personalKeyBytes = new Uint8Array(
+    personalKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+  );
+
+  const decrypted = new Uint8Array(encryptedBytes.length);
+  for (let i = 0; i < encryptedBytes.length; i++) {
+    decrypted[i] = encryptedBytes[i] ^ personalKeyBytes[i % personalKeyBytes.length];
+  }
+
+  return Array.from(decrypted, byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * Get and decrypt the group encryption key for a user
+ */
+export const getGroupEncryptionKey = async (
+  uid: string,
+  groupId: string
+): Promise<string | null> => {
+  try {
+    console.log('Getting group encryption key...');
+
+    // Get group document
+    const groupDoc = await getDoc(doc(firestore, 'groups', groupId));
+    if (!groupDoc.exists()) {
+      console.error('Group not found');
+      return null;
+    }
+
+    const groupData = groupDoc.data();
+    const encryptedKeys = groupData.encryptedKeys || {};
+    const userEncryptedKey = encryptedKeys[uid];
+
+    if (!userEncryptedKey) {
+      console.error('User encrypted group key not found');
+      return null;
+    }
+
+    // Get user's personal key
+    const personalKey = await getPersonalKey(uid);
+    if (!personalKey) {
+      console.error('Personal encryption key not found');
+      return null;
+    }
+
+    // Decrypt group key
+    const decryptedGroupKey = await decryptGroupKey(userEncryptedKey, personalKey);
+    console.log('✅ Group encryption key retrieved');
+
+    return decryptedGroupKey;
+  } catch (error) {
+    console.error('❌ Error getting group encryption key:', error);
+    return null;
+  }
+};
 
 /**
  * Clear all transactions for a user (used when pairing up)
@@ -113,11 +195,37 @@ export const generatePairCode = async (uid: string) => {
     throw new Error('Failed to generate unique code after multiple attempts');
   }
 
+  // Generate group encryption key
+  console.log('Creating group encryption key...');
+  const randomBytes = await Crypto.getRandomBytesAsync(32);
+  const groupKey = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+
+  // Get user's personal key to encrypt the group key
+  const personalKey = await getPersonalKey(uid);
+  if (!personalKey) {
+    throw new Error('Personal encryption key not found');
+  }
+
+  // Encrypt group key with user's personal key
+  const encryptedGroupKey = await encryptGroupKey(groupKey, personalKey);
+
+  // Create group document
+  const groupRef = await addDoc(collection(firestore, 'groups'), {
+    userIds: [uid],
+    createdAt: Timestamp.now(),
+    isLinked: false,
+    groupKey: groupKey, // Store raw key temporarily for User B
+    encryptedKeys: {
+      [uid]: encryptedGroupKey, // User A's encrypted version
+    },
+  });
+
   const now = Timestamp.now();
   const expiresAt = Timestamp.fromDate(new Date(now.toDate().getTime() + 10 * 60 * 1000));
 
   await setDoc(doc(firestore, 'pairCodes', code), {
     generatedBy: uid,
+    groupId: groupRef.id,
     createdAt: now,
     expiresAt,
     used: false,
@@ -153,19 +261,49 @@ export const redeemPartnerCode = async (
       throw new Error('Partner code has already been used');
     }
 
-    // Create a new group
-    console.log('Creating group...');
-    const groupRef = await addDoc(collection(firestore, 'groups'), {
-      userIds: [codeData.generatedBy, uid],
-      createdAt: now,
-    });
+    // Get the existing group
+    const groupId = codeData.groupId;
+    const groupDoc = await getDoc(doc(firestore, 'groups', groupId));
 
-    const groupId = groupRef.id;
+    if (!groupDoc.exists()) {
+      throw new Error('Group not found');
+    }
 
-    // Update both users with the group ID
+    const groupData = groupDoc.data();
+    const rawGroupKey = groupData.groupKey;
+    const encryptedKeys = groupData.encryptedKeys || {};
+
+    if (!rawGroupKey) {
+      throw new Error('Group key not found - group may already be linked');
+    }
+
+    // Get User B's personal key
+    const personalKey = await getPersonalKey(uid);
+    if (!personalKey) {
+      throw new Error('Personal encryption key not found');
+    }
+
+    // Encrypt the raw group key with User B's personal key
+    console.log('Encrypting group key for User B...');
+    const userBEncryptedKey = await encryptGroupKey(rawGroupKey, personalKey);
+
+    // Update group with both users and both encrypted keys
     console.log('Linking users to group...');
     const batch = writeBatch(firestore);
 
+    // Update group document - add User B's encrypted key and remove raw key
+    batch.update(doc(firestore, 'groups', groupId), {
+      userIds: [codeData.generatedBy, uid],
+      isLinked: true,
+      encryptedKeys: {
+        ...encryptedKeys,
+        [uid]: userBEncryptedKey, // Add User B's encrypted version
+      },
+      // Remove raw group key for security after User B has encrypted it
+      groupKey: null,
+    });
+
+    // Update both users with the group ID
     batch.update(doc(firestore, 'users', codeData.generatedBy), {
       linkedGroupId: groupId,
     });
@@ -185,8 +323,8 @@ export const redeemPartnerCode = async (
     await batch.commit();
     console.log('✅ Partner code redeemed successfully');
 
-    // Update user data in auth context
-    updateLinkedGroupId(groupId);
+    // Update user data in auth context and load group encryption key
+    await updateLinkedGroupId(groupId);
 
     return groupId;
   } catch (error) {
@@ -234,7 +372,7 @@ export const unlinkPartnerAndTransferTransactions = async (
  */
 export const unlinkPartner = async (
   uid: string,
-  updateLinkedGroupId: (groupId: string | null) => void
+  updateLinkedGroupId: (groupId: string | null) => Promise<void>
 ) => {
   if (!uid) {
     throw new Error('User not authenticated');
@@ -262,8 +400,8 @@ export const unlinkPartner = async (
 
   await unlinkPartnerAndTransferTransactions(uid, otherUserId, userData.linkedGroupId);
 
-  // Update the user context
-  updateLinkedGroupId(null);
+  // Update the user context and clear group encryption key
+  await updateLinkedGroupId(null);
 
   return otherUserId;
 };

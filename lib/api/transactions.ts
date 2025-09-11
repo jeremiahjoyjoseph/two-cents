@@ -32,8 +32,18 @@ const getTransactionPath = (userId: string, groupId: string | null) => {
  */
 const encryptTransaction = async (
   transaction: TransactionInput,
-  encryptionKey: string
+  personalKey: string | null,
+  groupKey: string | null
 ): Promise<Omit<EncryptedTransaction, 'id' | 'createdAt'>> => {
+  const isGroupTransaction = !!transaction.groupId;
+  const encryptionKey = isGroupTransaction ? groupKey : personalKey;
+
+  if (!encryptionKey) {
+    throw new Error(
+      `Encryption key not found for ${isGroupTransaction ? 'group' : 'personal'} transaction`
+    );
+  }
+
   const encryptedAmount = await encryptAmount(transaction.amount, encryptionKey);
 
   return {
@@ -51,8 +61,18 @@ const encryptTransaction = async (
  */
 const decryptTransaction = async (
   encryptedTransaction: EncryptedTransaction,
-  encryptionKey: string
+  personalKey: string | null,
+  groupKey: string | null
 ): Promise<Transaction> => {
+  const isGroupTransaction = !!encryptedTransaction.groupId;
+  const encryptionKey = isGroupTransaction ? groupKey : personalKey;
+
+  if (!encryptionKey) {
+    throw new Error(
+      `Encryption key not found for ${isGroupTransaction ? 'group' : 'personal'} transaction`
+    );
+  }
+
   const amount = await decryptAmount(encryptedTransaction.encryptedAmount, encryptionKey);
 
   return {
@@ -71,13 +91,14 @@ export const addTransaction = async (
   userId: string,
   groupId: string | null,
   data: TransactionInput,
-  encryptionKey: string
+  personalKey: string | null,
+  groupKey: string | null
 ) => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
 
   // Encrypt the transaction before storing
-  const encryptedData = await encryptTransaction(data, encryptionKey);
+  const encryptedData = await encryptTransaction(data, personalKey, groupKey);
 
   return await addDoc(ref, {
     ...encryptedData,
@@ -100,7 +121,8 @@ export const updateTransaction = async (
   groupId: string | null,
   transactionId: string,
   updates: TransactionUpdate,
-  encryptionKey: string
+  personalKey: string | null,
+  groupKey: string | null
 ) => {
   const path = getTransactionPath(userId, groupId);
   const ref = doc(firestore, path, transactionId);
@@ -108,6 +130,15 @@ export const updateTransaction = async (
   // If amount is being updated, encrypt it
   const encryptedUpdates: any = { ...updates };
   if (updates.amount !== undefined) {
+    const isGroupTransaction = !!groupId;
+    const encryptionKey = isGroupTransaction ? groupKey : personalKey;
+
+    if (!encryptionKey) {
+      throw new Error(
+        `Encryption key not found for ${isGroupTransaction ? 'group' : 'personal'} transaction`
+      );
+    }
+
     encryptedUpdates.encryptedAmount = await encryptAmount(updates.amount, encryptionKey);
     delete encryptedUpdates.amount; // Remove the unencrypted amount
   }
@@ -119,7 +150,8 @@ export const getTransactionsByMonth = async (
   userId: string,
   groupId: string | null,
   month: string, // e.g. "2025-05"
-  encryptionKey: string
+  personalKey: string | null,
+  groupKey: string | null
 ): Promise<Transaction[]> => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
@@ -139,7 +171,7 @@ export const getTransactionsByMonth = async (
   // Decrypt all transactions
   const decryptedTransactions = await Promise.all(
     encryptedTransactions.map(encryptedTransaction =>
-      decryptTransaction(encryptedTransaction, encryptionKey)
+      decryptTransaction(encryptedTransaction, personalKey, groupKey)
     )
   );
 
@@ -149,7 +181,8 @@ export const getTransactionsByMonth = async (
 export const getAllTransactions = async (
   userId: string,
   groupId: string | null,
-  encryptionKey: string
+  personalKey: string | null,
+  groupKey: string | null
 ): Promise<Transaction[]> => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
@@ -164,7 +197,7 @@ export const getAllTransactions = async (
   // Decrypt all transactions
   const decryptedTransactions = await Promise.all(
     encryptedTransactions.map(encryptedTransaction =>
-      decryptTransaction(encryptedTransaction, encryptionKey)
+      decryptTransaction(encryptedTransaction, personalKey, groupKey)
     )
   );
 
@@ -174,7 +207,8 @@ export const getAllTransactions = async (
 export const listenToTransactions = (
   userId: string,
   groupId: string | null,
-  encryptionKey: string,
+  personalKey: string | null,
+  groupKey: string | null,
   onUpdate: (transactions: Transaction[]) => void
 ) => {
   const path = getTransactionPath(userId, groupId);
@@ -190,7 +224,7 @@ export const listenToTransactions = (
     // Decrypt all transactions
     const decryptedTransactions = await Promise.all(
       encryptedTransactions.map(encryptedTransaction =>
-        decryptTransaction(encryptedTransaction, encryptionKey)
+        decryptTransaction(encryptedTransaction, personalKey, groupKey)
       )
     );
 

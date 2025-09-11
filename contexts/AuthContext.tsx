@@ -1,6 +1,9 @@
 import { auth, firestore } from '@/config/firebase';
 import { loginUser, registerUser, updateUserData } from '@/lib/api/auth';
-import { unlinkPartnerAndTransferTransactions } from '@/lib/api/pair';
+import {
+  getGroupEncryptionKey as getGroupKeyFromAPI,
+  unlinkPartnerAndTransferTransactions,
+} from '@/lib/api/pair';
 import { deletePersonalKey, getPersonalKey, hasPersonalKey, setPersonalKey } from '@/lib/utils';
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
 import * as Crypto from 'expo-crypto';
@@ -22,11 +25,13 @@ interface AuthContextType {
   login: (data: UserLoginData) => Promise<void>;
   register: (data: UserRegistrationData) => Promise<UserResponse>;
   updateUser: (uid: string) => Promise<void>;
-  updateLinkedGroupId: (groupId: string | null) => void;
+  updateLinkedGroupId: (groupId: string | null) => Promise<void>;
   deleteAccount: (password?: string) => Promise<void>;
   getEncryptionKey: () => Promise<string | null>;
   refreshEncryptionKey: () => Promise<void>;
   regenerateEncryptionKey: () => Promise<void>;
+  groupEncryptionKey: string | null;
+  getGroupEncryptionKey: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
+  const [groupEncryptionKey, setGroupEncryptionKey] = useState<string | null>(null);
 
   // Force logout when encryption key is missing
   const forceLogout = async () => {
@@ -131,6 +137,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Load group encryption key
+  const loadGroupEncryptionKey = async (uid: string, groupId: string): Promise<boolean> => {
+    try {
+      console.log('🔑 Loading group encryption key...');
+      const groupKey = await getGroupKeyFromAPI(uid, groupId);
+      if (!groupKey) {
+        console.log('❌ No group encryption key found');
+        return false;
+      }
+      setGroupEncryptionKey(groupKey);
+      console.log('✅ Group encryption key loaded successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error loading group encryption key:', error);
+      return false;
+    }
+  };
+
+  // Get group encryption key with fallback
+  const getGroupEncryptionKey = async (): Promise<string | null> => {
+    if (!user?.uid || !user.linkedGroupId) {
+      return null;
+    }
+
+    if (groupEncryptionKey) {
+      return groupEncryptionKey;
+    }
+
+    console.log('🔄 Group encryption key not in context, loading from group...');
+    const success = await loadGroupEncryptionKey(user.uid, user.linkedGroupId);
+    return success ? groupEncryptionKey : null;
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
       if (firebaseUser) {
@@ -156,6 +195,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!keyLoaded) {
             // Key loading failed, user will be logged out
             return;
+          }
+
+          // Load group encryption key if user is linked to a group
+          if (userData.linkedGroupId) {
+            await loadGroupEncryptionKey(firebaseUser.uid, userData.linkedGroupId);
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
@@ -194,9 +238,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateLinkedGroupId = (groupId: string | null) => {
+  const updateLinkedGroupId = async (groupId: string | null) => {
     if (user) {
       setUser({ ...user, linkedGroupId: groupId });
+
+      // Load group encryption key if linking to a group
+      if (groupId) {
+        console.log('🔑 Loading group encryption key after linking...');
+        await loadGroupEncryptionKey(user.uid, groupId);
+      } else {
+        // Clear group encryption key if unlinking
+        console.log('🔑 Clearing group encryption key after unlinking...');
+        setGroupEncryptionKey(null);
+      }
     }
   };
 
@@ -254,6 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser,
         isAuthReady,
         encryptionKey,
+        groupEncryptionKey,
         login,
         register,
         updateUser,
@@ -262,6 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getEncryptionKey,
         refreshEncryptionKey,
         regenerateEncryptionKey,
+        getGroupEncryptionKey,
       }}
     >
       {children}

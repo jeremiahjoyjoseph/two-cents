@@ -17,15 +17,17 @@ export const useTransactionsListener = (
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { getEncryptionKey } = useAuth();
+  const { getEncryptionKey, getGroupEncryptionKey } = useAuth();
 
   useEffect(() => {
     if (!userId) return;
 
     const setupListener = async () => {
       try {
-        const encryptionKey = await getEncryptionKey();
-        if (!encryptionKey) {
+        const personalKey = await getEncryptionKey();
+        const groupKey = groupId ? await getGroupEncryptionKey() : null;
+
+        if (!personalKey && !groupKey) {
           console.error('No encryption key available for transactions');
           setLoading(false);
           return;
@@ -34,7 +36,8 @@ export const useTransactionsListener = (
         const unsubscribe = listenToTransactions(
           userId,
           groupId || null,
-          encryptionKey,
+          personalKey,
+          groupKey,
           transactions => {
             setTransactions(transactions);
             setLoading(false);
@@ -59,7 +62,7 @@ export const useTransactionsListener = (
         unsubscribe();
       }
     };
-  }, [userId, groupId, getEncryptionKey]);
+  }, [userId, groupId, getEncryptionKey, getGroupEncryptionKey]);
 
   return {
     transactions,

@@ -85,7 +85,7 @@ export default function Transaction() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { user, getEncryptionKey } = useAuth();
+  const { user, getEncryptionKey, getGroupEncryptionKey } = useAuth();
   const [isModalVisible, setModalVisible] = useState(!params.id);
   const [amount, setAmount] = useState(params.amount?.toString() || '0');
   const [title, setTitle] = useState(params.title?.toString() || '');
@@ -161,9 +161,11 @@ export default function Transaction() {
     }
 
     try {
-      // Get encryption key from AuthContext
-      const encryptionKey = await getEncryptionKey();
-      if (!encryptionKey) {
+      // Get encryption keys from AuthContext
+      const personalKey = await getEncryptionKey();
+      const groupKey = user.linkedGroupId ? await getGroupEncryptionKey() : null;
+
+      if (!personalKey && !groupKey) {
         console.error('No encryption key available');
         return;
       }
@@ -186,10 +188,17 @@ export default function Transaction() {
           user.linkedGroupId || null,
           transactionId,
           transaction,
-          encryptionKey
+          personalKey,
+          groupKey
         );
       } else {
-        await addTransaction(user.uid, user.linkedGroupId || null, transaction, encryptionKey);
+        await addTransaction(
+          user.uid,
+          user.linkedGroupId || null,
+          transaction,
+          personalKey,
+          groupKey
+        );
       }
       router.dismiss();
     } catch (error) {
