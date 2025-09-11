@@ -7,6 +7,7 @@ import { TransactionListItem } from '@/components/TransactionListItem';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTransactionsListener } from '@/lib/hooks/useTransactionsListener';
+import { autoTestEncryptionKeyOnLoad } from '@/lib/testing';
 import { Transaction } from '@/types/transactions';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
@@ -102,6 +103,13 @@ export default function Home() {
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const insets = useSafeAreaInsets();
   const [monthModalVisible, setMonthModalVisible] = useState(false);
+
+  // Development testing - run on app load
+  React.useEffect(() => {
+    if (__DEV__) {
+      autoTestEncryptionKeyOnLoad(user);
+    }
+  }, [user]);
 
   const months = React.useMemo(() => {
     const arr = [];

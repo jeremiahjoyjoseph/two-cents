@@ -1,5 +1,7 @@
 import { auth, firestore } from '@/config/firebase';
+import { deletePersonalKey, getPersonalKey, hasPersonalKey, setPersonalKey } from '@/lib/utils';
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
+import * as Crypto from 'expo-crypto';
 import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -25,10 +27,25 @@ export const registerUser = async ({
 }: UserRegistrationData): Promise<UserResponse> => {
   try {
     const response = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Generate a 32-byte encryption key using expo-crypto
+    const randomBytes = await Crypto.getRandomBytesAsync(32);
+    const encryptionKey = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join(
+      ''
+    );
+
+    // Log the encryption key for testing
+    console.log('Generated encryption key:', encryptionKey);
+    console.log('Key length:', encryptionKey.length, 'characters');
+
+    // Store encryption key securely on device
+    await setPersonalKey(response.user.uid, encryptionKey);
+
     const userData = {
       name,
       email,
       uid: response.user.uid,
+      createdAt: new Date().toISOString(),
     };
     await setDoc(doc(firestore, 'users', response.user.uid), userData);
     return { success: true, user: userData, status: 200 };
@@ -52,11 +69,37 @@ export const updateUserData = async (uid: string): Promise<User> => {
         name: data?.name,
         email: data?.email,
         linkedGroupId: data?.linkedGroupId,
+        createdAt: data?.createdAt,
       };
       return userData;
     }
     throw new Error('User not found');
-  } catch (error) {
+  } catch {
     throw new Error('Failed to update user');
   }
+};
+
+// Helper function to get encryption key from secure store
+export const getEncryptionKey = async (uid: string): Promise<string | null> => {
+  return await getPersonalKey(uid);
+};
+
+// Helper function to delete encryption key from secure store (useful for logout)
+export const deleteEncryptionKey = async (uid: string): Promise<void> => {
+  await deletePersonalKey(uid);
+};
+
+// Helper function to verify if encryption key exists in secure store
+export const verifyEncryptionKey = async (uid: string): Promise<boolean> => {
+  const exists = await hasPersonalKey(uid);
+  console.log(`Encryption key exists for user ${uid}:`, exists);
+  if (exists) {
+    const key = await getPersonalKey(uid);
+    console.log('Key length:', key?.length || 0, 'characters');
+    console.log(
+      'Key preview:',
+      key?.substring(0, 8) + '...' + key?.substring((key?.length || 0) - 8)
+    );
+  }
+  return exists;
 };

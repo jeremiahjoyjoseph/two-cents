@@ -1,4 +1,5 @@
 import { firestore } from '@/config/firebase';
+import { deleteAllTransactions } from '@/lib/api/transactions';
 import {
   addDoc,
   collection,
@@ -15,6 +16,21 @@ import {
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const MAX_ATTEMPTS = 5; // Prevent infinite loops
+
+/**
+ * Clear all transactions for a user (used when pairing up)
+ * This is necessary because users can't decrypt each other's transactions
+ */
+const clearUserTransactions = async (userId: string): Promise<void> => {
+  try {
+    console.log('Clearing user transactions...');
+    await deleteAllTransactions(userId, null);
+    console.log('✅ User transactions cleared');
+  } catch (error) {
+    console.error('❌ Error clearing transactions:', error);
+    throw error;
+  }
+};
 
 const generateRandomCode = (length: number): string => {
   let result = '';
@@ -37,36 +53,14 @@ const cleanupExpiredCodes = async (uid: string) => {
     const q = query(codesRef, where('generatedBy', '==', uid), where('expiresAt', '<', now));
 
     const querySnapshot = await getDocs(q);
-    console.log('Found expired codes:', querySnapshot.size);
-
-    // Log details of each expired code
-    querySnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      console.log('Expired code:', {
-        id: doc.id,
-        generatedBy: data.generatedBy,
-        expiresAt: data.expiresAt?.toDate(),
-        used: data.used,
-        createdAt: data.createdAt?.toDate(),
-      });
-    });
-
-    const deletePromises = querySnapshot.docs.map(doc => {
-      console.log('Attempting to delete code:', doc.id);
-      return deleteDoc(doc.ref);
-    });
-
-    await Promise.all(deletePromises);
-    console.log('Successfully deleted all expired codes');
+    if (querySnapshot.size > 0) {
+      console.log(`Cleaning up ${querySnapshot.size} expired codes...`);
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      console.log('✅ Expired codes cleaned up');
+    }
   } catch (error) {
     console.log('Error cleaning up expired codes:', error);
-    // Log more details about the error
-    if (error instanceof Error) {
-      console.log('Error details:', {
-        message: error.message,
-        stack: error.stack,
-      });
-    }
   }
 };
 
@@ -85,59 +79,42 @@ const findExistingCode = async (uid: string): Promise<string | null> => {
     if (!querySnapshot.empty) {
       return querySnapshot.docs[0].id;
     }
-  } catch (error) {
-    console.log('No existing codes found, proceeding with new code generation');
+  } catch {
+    // No existing codes found
   }
   return null;
 };
 
 export const generatePairCode = async (uid: string) => {
-  console.log('[generatePairCode] Starting code generation for user:', uid);
+  console.log('Generating pair code...');
 
   // Start cleanup in background
-  cleanupExpiredCodes(uid).catch(error => {
-    console.error('[generatePairCode] Error during cleanup:', error);
-  });
+  cleanupExpiredCodes(uid).catch(() => {});
 
-  // Step 1: Check for existing unexpired and unused code
-  console.log('[generatePairCode] Checking for existing valid code...');
+  // Check for existing unexpired and unused code
   const existingCode = await findExistingCode(uid);
   if (existingCode) {
-    console.log('[generatePairCode] Found existing valid code:', existingCode);
+    console.log('✅ Using existing valid code');
     return existingCode;
   }
 
-  console.log('[generatePairCode] No existing code found, generating new code');
-  let code = generateRandomCode(6); // Initialize with first attempt
-  let attempts = 1; // Start at 1 since we already generated once
+  // Generate new unique code
+  let code = generateRandomCode(6);
+  let attempts = 1;
   let isUnique = await isCodeUnique(code);
-  console.log('[generatePairCode] Initial code generation attempt:', { code, isUnique });
 
-  // Keep generating codes until we find a unique one or hit max attempts
   while (!isUnique && attempts < MAX_ATTEMPTS) {
     code = generateRandomCode(6);
     isUnique = await isCodeUnique(code);
     attempts++;
-    console.log('[generatePairCode] Retry attempt:', { attempt: attempts, code, isUnique });
   }
 
   if (!isUnique) {
-    console.error(
-      '[generatePairCode] Failed to generate unique code after',
-      MAX_ATTEMPTS,
-      'attempts'
-    );
     throw new Error('Failed to generate unique code after multiple attempts');
   }
 
   const now = Timestamp.now();
   const expiresAt = Timestamp.fromDate(new Date(now.toDate().getTime() + 10 * 60 * 1000));
-
-  console.log('[generatePairCode] Generated new code:', {
-    code,
-    expiresAt: expiresAt.toDate(),
-    generatedBy: uid,
-  });
 
   await setDoc(doc(firestore, 'pairCodes', code), {
     generatedBy: uid,
@@ -146,7 +123,7 @@ export const generatePairCode = async (uid: string) => {
     used: false,
   });
 
-  console.log('[generatePairCode] Successfully saved code to database');
+  console.log('✅ Pair code generated successfully');
   return code;
 };
 
@@ -155,130 +132,79 @@ export const redeemPartnerCode = async (
   code: string,
   updateLinkedGroupId: (groupId: string | null) => void
 ): Promise<string> => {
-  console.log('[redeemPartnerCode] Starting code redemption:', { uid, code });
+  console.log('Redeeming partner code...');
 
   try {
-    // Step 1: Validate the pair code
-    console.log('[redeemPartnerCode] Validating code...');
+    // Validate the pair code
     const codeDoc = await getDoc(doc(firestore, 'pairCodes', code));
 
     if (!codeDoc.exists()) {
-      console.error('[redeemPartnerCode] Invalid code - document does not exist');
       throw new Error('Invalid partner code');
     }
 
     const codeData = codeDoc.data();
     const now = Timestamp.now();
-    console.log('[redeemPartnerCode] Code data:', {
-      generatedBy: codeData.generatedBy,
-      expiresAt: codeData.expiresAt.toDate(),
-      used: codeData.used,
-    });
 
     if (codeData.expiresAt.toDate() < now.toDate()) {
-      console.error('[redeemPartnerCode] Code expired at:', codeData.expiresAt.toDate());
       throw new Error('Partner code has expired');
     }
 
     if (codeData.used) {
-      console.error('[redeemPartnerCode] Code already used');
       throw new Error('Partner code has already been used');
     }
 
-    // Step 2: Create a new group
-    console.log('[redeemPartnerCode] Creating new group...');
+    // Create a new group
+    console.log('Creating group...');
     const groupRef = await addDoc(collection(firestore, 'groups'), {
       userIds: [codeData.generatedBy, uid],
       createdAt: now,
     });
 
     const groupId = groupRef.id;
-    console.log('[redeemPartnerCode] Created new group:', groupId);
 
-    // Step 3: Update both users with the group ID
-    console.log('[redeemPartnerCode] Updating user documents...');
+    // Update both users with the group ID
+    console.log('Linking users to group...');
     const batch = writeBatch(firestore);
 
-    // Update the code generator's user document
     batch.update(doc(firestore, 'users', codeData.generatedBy), {
       linkedGroupId: groupId,
     });
 
-    // Update the redeemer's user document
     batch.update(doc(firestore, 'users', uid), {
       linkedGroupId: groupId,
     });
 
-    // Step 4: Migrate and delete transactions
-    console.log('[redeemPartnerCode] Starting transaction migration and deletion...');
+    // Clear all transactions (both users start fresh due to encryption key mismatch)
+    console.log('Clearing transactions for fresh start...');
+    await Promise.all([clearUserTransactions(codeData.generatedBy), clearUserTransactions(uid)]);
 
-    // Get transactions from both users
-    const [generatorTransactions, redeemerTransactions] = await Promise.all([
-      getDocs(collection(firestore, 'users', codeData.generatedBy, 'transactions')),
-      getDocs(collection(firestore, 'users', uid, 'transactions')),
-    ]);
-
-    console.log('[redeemPartnerCode] Found transactions:', {
-      generator: generatorTransactions.size,
-      redeemer: redeemerTransactions.size,
-    });
-
-    // Create a new batch for transaction operations
-    const transactionBatch = writeBatch(firestore);
-
-    // Migrate generator's transactions to group
-    generatorTransactions.docs.forEach(docSnapshot => {
-      const transactionData = docSnapshot.data();
-      const newTransactionRef = doc(collection(firestore, 'groups', groupId, 'transactions'));
-
-      transactionBatch.set(newTransactionRef, {
-        ...transactionData,
-        createdBy: codeData.generatedBy,
-      });
-
-      // Delete the transaction from generator's collection
-      transactionBatch.delete(docSnapshot.ref);
-    });
-
-    // Delete redeemer's transactions
-    redeemerTransactions.docs.forEach(docSnapshot => {
-      transactionBatch.delete(docSnapshot.ref);
-    });
-
-    // Step 5: Delete the pair code
-    console.log('[redeemPartnerCode] Deleting used code...');
+    // Delete the pair code
     batch.delete(doc(firestore, 'pairCodes', code));
 
-    // Execute all batches
-    console.log('[redeemPartnerCode] Committing all changes...');
-    await Promise.all([batch.commit(), transactionBatch.commit()]);
-    console.log('[redeemPartnerCode] Successfully completed all operations');
+    // Execute the batch
+    await batch.commit();
+    console.log('✅ Partner code redeemed successfully');
 
     // Update user data in auth context
     updateLinkedGroupId(groupId);
 
     return groupId;
   } catch (error) {
-    console.error('[redeemPartnerCode] Error during redemption:', error);
-    if (error instanceof Error) {
-      console.error('[redeemPartnerCode] Error details:', {
-        message: error.message,
-        stack: error.stack,
-      });
-    }
+    console.error('❌ Error redeeming partner code:', error);
     throw error;
   }
 };
 
 /**
- * Unlinks a partner group, deletes it, and moves all group transactions
- * back to individual user transaction subcollections.
+ * Unlinks a partner group, deletes it, and clears all group transactions
  */
 export const unlinkPartnerAndTransferTransactions = async (
   userA: string,
   userB: string,
   groupId: string
 ) => {
+  console.log('Unlinking partners...');
+
   const groupDoc = await getDoc(doc(firestore, 'groups', groupId));
   if (!groupDoc.exists()) {
     throw new Error('Group not found');
@@ -287,43 +213,24 @@ export const unlinkPartnerAndTransferTransactions = async (
   const transactionSnap = await getDocs(collection(firestore, 'groups', groupId, 'transactions'));
   const batch = writeBatch(firestore);
 
-  // 1. Remove groupId from both users in Firestore
+  // Remove groupId from both users
   batch.update(doc(firestore, 'users', userA), { linkedGroupId: null });
   batch.update(doc(firestore, 'users', userB), { linkedGroupId: null });
 
-  // 2. Move each transaction to both users' collections
+  // Clear all group transactions
   transactionSnap.forEach(docSnap => {
-    const data = docSnap.data();
-    const createdBy = data.createdBy;
-    if (!createdBy) return;
-
-    // Copy to creator's collection
-    const creatorTxnRef = doc(collection(firestore, 'users', createdBy, 'transactions'));
-    batch.set(creatorTxnRef, {
-      ...data,
-      migratedFromGroupId: groupId,
-    });
-
-    // Copy to other user's collection
-    const otherUserId = createdBy === userA ? userB : userA;
-    const otherUserTxnRef = doc(collection(firestore, 'users', otherUserId, 'transactions'));
-    batch.set(otherUserTxnRef, {
-      ...data,
-      migratedFromGroupId: groupId,
-    });
-
-    batch.delete(docSnap.ref); // delete from group
+    batch.delete(docSnap.ref);
   });
 
-  // 3. Delete the group doc itself
+  // Delete the group doc
   batch.delete(doc(firestore, 'groups', groupId));
 
   await batch.commit();
+  console.log('✅ Partners unlinked successfully');
 };
 
 /**
- * Handles the complete process of unlinking a partner, including fetching the group
- * document and transferring transactions.
+ * Handles the complete process of unlinking a partner
  */
 export const unlinkPartner = async (
   uid: string,

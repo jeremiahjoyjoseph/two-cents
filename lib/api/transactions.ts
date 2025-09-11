@@ -1,5 +1,11 @@
 import { firestore } from '@/config/firebase';
-import { Transaction, TransactionInput, TransactionUpdate } from '@/types/transactions';
+import { decryptAmount, encryptAmount } from '@/lib/utils';
+import {
+  EncryptedTransaction,
+  Transaction,
+  TransactionInput,
+  TransactionUpdate,
+} from '@/types/transactions';
 import {
   addDoc,
   collection,
@@ -21,15 +27,60 @@ const getTransactionPath = (userId: string, groupId: string | null) => {
   return groupId ? `groups/${groupId}/transactions` : `users/${userId}/transactions`;
 };
 
+/**
+ * Convert Transaction to EncryptedTransaction
+ */
+const encryptTransaction = async (
+  transaction: TransactionInput,
+  encryptionKey: string
+): Promise<Omit<EncryptedTransaction, 'id' | 'createdAt'>> => {
+  const encryptedAmount = await encryptAmount(transaction.amount, encryptionKey);
+
+  return {
+    title: transaction.title,
+    encryptedAmount,
+    type: transaction.type,
+    date: transaction.date,
+    createdBy: transaction.createdBy,
+    groupId: transaction.groupId || null,
+  };
+};
+
+/**
+ * Convert EncryptedTransaction to Transaction
+ */
+const decryptTransaction = async (
+  encryptedTransaction: EncryptedTransaction,
+  encryptionKey: string
+): Promise<Transaction> => {
+  const amount = await decryptAmount(encryptedTransaction.encryptedAmount, encryptionKey);
+
+  return {
+    id: encryptedTransaction.id,
+    title: encryptedTransaction.title,
+    amount,
+    type: encryptedTransaction.type,
+    date: encryptedTransaction.date,
+    createdAt: encryptedTransaction.createdAt,
+    createdBy: encryptedTransaction.createdBy,
+    groupId: encryptedTransaction.groupId || null,
+  };
+};
+
 export const addTransaction = async (
   userId: string,
   groupId: string | null,
-  data: TransactionInput
+  data: TransactionInput,
+  encryptionKey: string
 ) => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
+
+  // Encrypt the transaction before storing
+  const encryptedData = await encryptTransaction(data, encryptionKey);
+
   return await addDoc(ref, {
-    ...data,
+    ...encryptedData,
     createdAt: Timestamp.now(),
   });
 };
@@ -48,17 +99,27 @@ export const updateTransaction = async (
   userId: string,
   groupId: string | null,
   transactionId: string,
-  updates: TransactionUpdate
+  updates: TransactionUpdate,
+  encryptionKey: string
 ) => {
   const path = getTransactionPath(userId, groupId);
   const ref = doc(firestore, path, transactionId);
-  return await updateDoc(ref, updates);
+
+  // If amount is being updated, encrypt it
+  const encryptedUpdates: any = { ...updates };
+  if (updates.amount !== undefined) {
+    encryptedUpdates.encryptedAmount = await encryptAmount(updates.amount, encryptionKey);
+    delete encryptedUpdates.amount; // Remove the unencrypted amount
+  }
+
+  return await updateDoc(ref, encryptedUpdates);
 };
 
 export const getTransactionsByMonth = async (
   userId: string,
   groupId: string | null,
-  month: string // e.g. "2025-05"
+  month: string, // e.g. "2025-05"
+  encryptionKey: string
 ): Promise<Transaction[]> => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
@@ -70,42 +131,70 @@ export const getTransactionsByMonth = async (
   );
 
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
+  const encryptedTransactions = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-  })) as Transaction[];
+  })) as EncryptedTransaction[];
+
+  // Decrypt all transactions
+  const decryptedTransactions = await Promise.all(
+    encryptedTransactions.map(encryptedTransaction =>
+      decryptTransaction(encryptedTransaction, encryptionKey)
+    )
+  );
+
+  return decryptedTransactions;
 };
 
 export const getAllTransactions = async (
   userId: string,
-  groupId: string | null
+  groupId: string | null,
+  encryptionKey: string
 ): Promise<Transaction[]> => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
   const q = query(ref, orderBy('date', 'desc'));
 
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
+  const encryptedTransactions = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-  })) as Transaction[];
+  })) as EncryptedTransaction[];
+
+  // Decrypt all transactions
+  const decryptedTransactions = await Promise.all(
+    encryptedTransactions.map(encryptedTransaction =>
+      decryptTransaction(encryptedTransaction, encryptionKey)
+    )
+  );
+
+  return decryptedTransactions;
 };
 
 export const listenToTransactions = (
   userId: string,
   groupId: string | null,
+  encryptionKey: string,
   onUpdate: (transactions: Transaction[]) => void
 ) => {
   const path = getTransactionPath(userId, groupId);
   const ref = collection(firestore, path);
   const q = query(ref, orderBy('date', 'desc'));
 
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const transactions = snapshot.docs.map(doc => ({
+  return onSnapshot(q, async (snapshot: QuerySnapshot<DocumentData>) => {
+    const encryptedTransactions = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-    })) as Transaction[];
-    onUpdate(transactions);
+    })) as EncryptedTransaction[];
+
+    // Decrypt all transactions
+    const decryptedTransactions = await Promise.all(
+      encryptedTransactions.map(encryptedTransaction =>
+        decryptTransaction(encryptedTransaction, encryptionKey)
+      )
+    );
+
+    onUpdate(decryptedTransactions);
   });
 };
 
