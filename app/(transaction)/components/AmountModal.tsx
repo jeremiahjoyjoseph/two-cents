@@ -1,7 +1,8 @@
+import { UniversalButton } from '@/components/UniversalButton';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, MD3Theme, useTheme } from 'react-native-paper';
+import { MD3Theme, useTheme } from 'react-native-paper';
 
 import Price from '@/components/Price';
 import { ThemedText } from '@/components/ThemedText';
@@ -186,27 +187,25 @@ export default function AmountModal({
 
         {/* Action Buttons */}
         <ThemedView style={styles.actionButtonsContainer}>
-          <Button
-            mode="text"
+          <UniversalButton
+            variant="ghost"
+            size="medium"
             onPress={onClose}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="close" size={size} color={color} />
-            )}
-            textColor={theme.colors.onSurface}
+            icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+            iconPosition="left"
           >
             Cancel
-          </Button>
-          <Button
-            mode="contained"
+          </UniversalButton>
+          <UniversalButton
+            variant="primary"
+            size="large"
             onPress={handleSubmit}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="check" size={size} color={color} />
-            )}
-            buttonColor={theme.colors.primary}
+            icon={<IconSymbol name="check" size={20} color={theme.colors.onPrimary} />}
+            iconPosition="left"
             style={styles.enterButton}
           >
             Enter
-          </Button>
+          </UniversalButton>
         </ThemedView>
       </ThemedView>
     </Modal>

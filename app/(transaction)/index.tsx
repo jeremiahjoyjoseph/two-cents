@@ -1,10 +1,10 @@
+import { UniversalButton } from '@/components/UniversalButton';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, TextInput, useTheme } from 'react-native-paper';
+import { TextInput, useTheme } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 
 import Price from '@/components/Price';
-import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -240,12 +240,12 @@ export default function Transaction() {
             </TouchableOpacity>
 
             <ThemedView style={styles.typeRow}>
-              <ThemedButton
-                mode="outlined"
+              <UniversalButton
+                variant="outline"
+                size="medium"
                 onPress={() => setTransactionTypeModalVisible(true)}
                 style={{
                   borderRadius: 30,
-                  backgroundColor: theme.colors.background,
                 }}
               >
                 {selectedType === 'income'
@@ -253,7 +253,7 @@ export default function Transaction() {
                   : selectedType === 'expense'
                   ? 'Expense'
                   : 'Transfer'}
-              </ThemedButton>
+              </UniversalButton>
               <TouchableOpacity style={[styles.deleteButton]} onPress={handleDelete}>
                 <IconSymbol name="delete" size={24} color={theme.colors.error} />
               </TouchableOpacity>
@@ -294,9 +294,15 @@ export default function Transaction() {
             <TouchableOpacity style={styles.priceContainer} onPress={() => setModalVisible(true)}>
               <Price value={parseFloat(amount)} type="title" style={styles.amountText} />
             </TouchableOpacity>
-            <Button mode="contained" onPress={() => handleSubmit(amount)} style={styles.addButton}>
+            <UniversalButton 
+              variant="primary" 
+              size="large" 
+              onPress={() => handleSubmit(amount)} 
+              style={styles.addButton}
+              fullWidth
+            >
               {transactionId ? 'Save' : 'Submit'}
-            </Button>
+            </UniversalButton>
           </ThemedView>
         </ThemedView>
       </SafeAreaView>

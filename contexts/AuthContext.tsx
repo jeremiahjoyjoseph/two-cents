@@ -1,5 +1,5 @@
 import { auth, firestore } from '@/config/firebase';
-import { loginUser, registerUser, updateUserData } from '@/lib/api/auth';
+import { loginUser, registerUser, sendPasswordReset, updateUserData } from '@/lib/api/auth';
 import {
   getGroupEncryptionKey as getGroupKeyFromAPI,
   unlinkPartnerAndTransferTransactions,
@@ -24,6 +24,7 @@ interface AuthContextType {
   encryptionKey: string | null;
   login: (data: UserLoginData) => Promise<void>;
   register: (data: UserRegistrationData) => Promise<UserResponse>;
+  forgotPassword: (email: string) => Promise<void>;
   updateUser: (uid: string) => Promise<void>;
   updateLinkedGroupId: (groupId: string | null) => Promise<void>;
   deleteAccount: (password?: string) => Promise<void>;
@@ -95,7 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fallback: try to load from secure store
     console.log('🔄 Encryption key not in context, loading from secure store...');
     const success = await loadEncryptionKey(user.uid);
-    return success ? encryptionKey : null;
+    if (success) {
+      // Return the key directly from secure store since state update is async
+      const key = await getPersonalKey(user.uid);
+      return key;
+    }
+    return null;
   };
 
   // Refresh encryption key from secure store
@@ -227,6 +233,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   };
 
+  const forgotPassword = async (email: string) => {
+    await sendPasswordReset(email);
+  };
+
   const updateUser = async (uid: string) => {
     try {
       if (!user) throw new Error('No user logged in');
@@ -311,6 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         groupEncryptionKey,
         login,
         register,
+        forgotPassword,
         updateUser,
         updateLinkedGroupId,
         deleteAccount,

@@ -3,7 +3,7 @@ import { deletePersonalKey, getPersonalKey, hasPersonalKey, setPersonalKey } fro
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
 import * as Crypto from 'expo-crypto';
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const loginUser = async ({ email, password }: UserLoginData) => {
@@ -102,4 +102,28 @@ export const verifyEncryptionKey = async (uid: string): Promise<boolean> => {
     );
   }
   return exists;
+};
+
+// Forgot password functionality
+export const sendPasswordReset = async (email: string): Promise<void> => {
+  try {
+    if (!email) {
+      throw new Error('Email is required');
+    }
+    await sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    if (error instanceof FirebaseError) {
+      console.error('Password reset error:', error.code, error.message);
+      if (error.code === 'auth/user-not-found') {
+        throw new Error('No account found with this email address');
+      }
+      if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address');
+      }
+      if (error.code === 'auth/too-many-requests') {
+        throw new Error('Too many requests. Please try again later');
+      }
+    }
+    throw new Error('Failed to send password reset email');
+  }
 };

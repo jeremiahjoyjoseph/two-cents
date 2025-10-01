@@ -27,6 +27,8 @@ export default function TabLayout() {
           elevation: 0,
           backgroundColor: tabBarBackgroundColor,
           height: 80,
+          paddingTop: 8,
+          paddingBottom: 8,
         },
       }}
     >
