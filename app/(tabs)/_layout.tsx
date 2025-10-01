@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 import { useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { TabBarButton } from '@/components/ui/TabBarButton';
@@ -11,6 +12,7 @@ import { useThemeMode } from '@/contexts/ThemeContext';
 export default function TabLayout() {
   const theme = useTheme();
   const { isDark } = useThemeMode();
+  const insets = useSafeAreaInsets();
 
   const tabBarBackgroundColor = isDark
     ? `${Colors.dark.background}CC` // 80% opacity
@@ -26,9 +28,9 @@ export default function TabLayout() {
           borderTopWidth: 0,
           elevation: 0,
           backgroundColor: tabBarBackgroundColor,
-          height: 80,
+          height: 80 + insets.bottom,
           paddingTop: 8,
-          paddingBottom: 8,
+          paddingBottom: 8 + insets.bottom,
         },
       }}
     >

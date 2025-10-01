@@ -1,26 +1,26 @@
 import { firestore } from '@/config/firebase';
 import { decryptAmount, encryptAmount } from '@/lib/utils';
 import {
-  EncryptedTransaction,
-  Transaction,
-  TransactionInput,
-  TransactionUpdate,
+    EncryptedTransaction,
+    Transaction,
+    TransactionInput,
+    TransactionUpdate,
 } from '@/types/transactions';
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  DocumentData,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  QuerySnapshot,
-  Timestamp,
-  updateDoc,
-  where,
-  writeBatch,
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    DocumentData,
+    getDocs,
+    onSnapshot,
+    orderBy,
+    query,
+    QuerySnapshot,
+    Timestamp,
+    updateDoc,
+    where,
+    writeBatch,
 } from 'firebase/firestore';
 
 const getTransactionPath = (userId: string, groupId: string | null) => {
@@ -53,6 +53,11 @@ const encryptTransaction = async (
     date: transaction.date,
     createdBy: transaction.createdBy,
     groupId: transaction.groupId || null,
+    // Category fields are NOT encrypted - store as-is
+    categoryId: transaction.categoryId,
+    categoryName: transaction.categoryName,
+    categoryIcon: transaction.categoryIcon,
+    categoryColor: transaction.categoryColor,
   };
 };
 
@@ -84,6 +89,11 @@ const decryptTransaction = async (
     createdAt: encryptedTransaction.createdAt,
     createdBy: encryptedTransaction.createdBy,
     groupId: encryptedTransaction.groupId || null,
+    // Category fields are passed through as-is (not encrypted)
+    categoryId: encryptedTransaction.categoryId,
+    categoryName: encryptedTransaction.categoryName,
+    categoryIcon: encryptedTransaction.categoryIcon,
+    categoryColor: encryptedTransaction.categoryColor,
   };
 };
 

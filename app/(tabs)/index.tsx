@@ -141,18 +141,28 @@ export default function Home() {
       : `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
   }
 
-  // Filter transactions by month or all time
+  // Filter transactions by month or all time, and by type if selected
   const filteredTransactions = React.useMemo(() => {
-    if (allTimeSelected) return transactions;
-    if (selectedMonthIdx === null || !months[selectedMonthIdx]) return transactions;
-    const selectedDate = months[selectedMonthIdx];
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth();
-    return transactions.filter(t => {
-      const tDate = new Date(t.date);
-      return tDate.getFullYear() === year && tDate.getMonth() === month;
-    });
-  }, [transactions, allTimeSelected, selectedMonthIdx, months]);
+    let filtered = transactions;
+    
+    // Apply month filter
+    if (!allTimeSelected && selectedMonthIdx !== null && months[selectedMonthIdx]) {
+      const selectedDate = months[selectedMonthIdx];
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+      filtered = filtered.filter(t => {
+        const tDate = new Date(t.date);
+        return tDate.getFullYear() === year && tDate.getMonth() === month;
+      });
+    }
+    
+    // Apply type filter
+    if (selectedType) {
+      filtered = filtered.filter(t => t.type === selectedType);
+    }
+    
+    return filtered;
+  }, [transactions, allTimeSelected, selectedMonthIdx, months, selectedType]);
 
   const getTotalExpense = () => {
     return filteredTransactions
@@ -213,20 +223,13 @@ export default function Home() {
               { backgroundColor: theme.colors.surfaceVariant },
             ]}
           >
-            <IconSymbol name="calendar-today" size={20} color={theme.colors.onSurface} />
             <ThemedText style={[styles.stickyHeaderMonthText, { color: theme.colors.onSurface }]}>
               {monthLabel}
             </ThemedText>
-            <IconSymbol
-              name="keyboard-arrow-down"
-              size={20}
-              color={theme.colors.onSurface}
-              style={styles.stickyHeaderMonthIcon}
-            />
           </TouchableOpacity>
         </View>
       )}
-      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + 20 }} onScroll={handleScroll}>
+      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + insets.bottom + 20 }} onScroll={handleScroll}>
         <ThemedView style={styles.container}>
           <Price
             value={getTotalIncome() - getTotalExpense()}
@@ -248,16 +251,9 @@ export default function Home() {
               { backgroundColor: theme.colors.surfaceVariant },
             ]}
           >
-            <IconSymbol name="calendar-today" size={20} color={theme.colors.onSurface} />
             <ThemedText style={[styles.stickyHeaderMonthText, { color: theme.colors.onSurface }]}>
               {monthLabel}
             </ThemedText>
-            <IconSymbol
-              name="keyboard-arrow-down"
-              size={20}
-              color={theme.colors.onSurface}
-              style={styles.stickyHeaderMonthIcon}
-            />
           </TouchableOpacity>
         </View>
         {sortedDates.map(date => {
@@ -285,6 +281,9 @@ export default function Home() {
                     amount: t.amount,
                     date: t.date,
                     type: t.type === 'income' ? 'income' : 'expense',
+                    categoryName: t.categoryName,
+                    categoryIcon: t.categoryIcon,
+                    categoryColor: t.categoryColor,
                   }}
                 />
               ))}
@@ -375,15 +374,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    minHeight: 48,
   },
   stickyHeaderMonthText: {
-    marginLeft: 8,
     fontWeight: 'bold',
-  },
-  stickyHeaderMonthIcon: {
-    marginLeft: 8,
+    fontSize: 16,
   },
   monthPickerContainer: {
     marginTop: 0,

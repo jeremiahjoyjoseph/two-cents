@@ -14,17 +14,34 @@ type TransactionListItemProps = {
 export const TransactionListItem = ({ transaction }: TransactionListItemProps) => {
   const theme = useTheme();
   const router = useRouter();
-  const { id, title, amount, type, date } = transaction;
+  const { id, title, amount, type, date, categoryName, categoryIcon, categoryColor } = transaction;
 
   const isExpense = type === 'expense';
   const iconName = isExpense ? 'arrow-upward' : 'arrow-downward';
   const iconColor = theme.colors.primary;
-  const priceColor = isExpense ? theme.colors.error : theme.colors.success;
+  // More classy colors for income/expense
+  const priceColor = isExpense ? '#E53E3E' : '#38A169'; // Deep red for expenses, forest green for income
+  
+  // Use category info if available, otherwise fallback to income/expense icons
+  const hasCategory = categoryName && categoryIcon && categoryColor;
+  
+  // Display logic: show category name if no title, or show category name below title if both exist
+  const shouldShowCategoryName = hasCategory && (!title || title.trim() === '');
+  const shouldShowCategoryBelowTitle = hasCategory && title && title.trim() !== '';
 
   const handlePress = () => {
     router.push({
       pathname: '/(transaction)',
-      params: { id, title, amount, type, date },
+      params: { 
+        id, 
+        title, 
+        amount, 
+        type, 
+        date,
+        categoryName: categoryName || '',
+        categoryIcon: categoryIcon || '',
+        categoryColor: categoryColor || '',
+      },
     });
   };
 
@@ -32,17 +49,46 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
     <TouchableOpacity onPress={handlePress}>
       <View style={styles.container}>
         <View style={styles.left}>
-          <View style={[styles.iconContainer, { backgroundColor: `${iconColor}20` }]}>
-            <IconSymbol name={iconName} size={24} color={iconColor} />
+          {hasCategory ? (
+            <View style={[styles.iconContainer, { backgroundColor: `${categoryColor}20` }]}>
+              <IconSymbol name={categoryIcon as any} size={24} color={categoryColor} />
+            </View>
+          ) : (
+            <View style={[styles.iconContainer, { backgroundColor: `${iconColor}20` }]}>
+              <IconSymbol name={iconName} size={24} color={iconColor} />
+            </View>
+          )}
+          <View style={styles.titleContainer}>
+            {shouldShowCategoryName ? (
+              <ThemedText
+                type="defaultSemiBold"
+                style={styles.title}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {categoryName}
+              </ThemedText>
+            ) : (
+              <ThemedText
+                type="defaultSemiBold"
+                style={styles.title}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </ThemedText>
+            )}
+            {shouldShowCategoryBelowTitle && (
+              <ThemedText
+                type="default"
+                style={styles.categoryName}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {categoryName}
+              </ThemedText>
+            )}
           </View>
-          <ThemedText
-            type="defaultSemiBold"
-            style={styles.title}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {title}
-          </ThemedText>
         </View>
         <View style={styles.right}>
           {/* {isExpense && (
@@ -65,7 +111,12 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
             value={amount}
             symbolPosition="before"
             type="defaultSemiBold"
-            style={{ color: priceColor }}
+            style={{ 
+              color: priceColor, 
+              fontSize: 18, 
+              fontWeight: '700',
+              textAlign: 'right'
+            }}
             showDecimals={false}
           />
         </View>
@@ -79,34 +130,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    marginHorizontal: 4,
+    marginVertical: 2,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    minWidth: 0,
+  },
+  titleContainer: {
+    flex: 1,
+    marginLeft: 16,
+    minWidth: 0,
+  },
+  categoryName: {
+    fontSize: 14,
+    opacity: 0.8,
+    marginTop: 4,
+    fontWeight: '500',
   },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 12,
   },
   icon: {
     marginRight: 2,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 24,
     flexShrink: 1,
-    flexGrow: 1,
     minWidth: 0,
-    flexWrap: 'wrap',
-    marginLeft: 12,
   },
 });

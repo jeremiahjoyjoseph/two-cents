@@ -24,6 +24,27 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   backspace: 'delete.left',
   delete: 'trash',
   'link-off': 'link',
+  // Category icons
+  'account-balance': 'building.2',
+  'restaurant': 'fork.knife',
+  'local-gas-station': 'fuelpump',
+  'shopping-bag': 'bag',
+  'flight-takeoff': 'airplane',
+  'receipt-long': 'doc.text',
+  'local-grocery-store': 'cart',
+  'work': 'briefcase',
+  'school': 'graduationcap',
+  'health-and-safety': 'cross.case',
+  'sports': 'sportscourt',
+  'music-note': 'music.note',
+  'movie': 'tv',
+  'car-repair': 'wrench.and.screwdriver',
+  'phone': 'phone',
+  'wifi': 'wifi',
+  'electric-bolt': 'bolt',
+  'water-drop': 'drop',
+  'cleaning-services': 'sparkles',
+  'category': 'square.grid.2x2',
 };
 
 export function IconSymbol({

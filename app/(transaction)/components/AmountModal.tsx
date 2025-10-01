@@ -1,8 +1,9 @@
 import { UniversalButton } from '@/components/UniversalButton';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { MD3Theme, useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Price from '@/components/Price';
 import { ThemedText } from '@/components/ThemedText';
@@ -24,7 +25,7 @@ interface AmountProps {
   setAmount: (amount: string) => void;
 }
 
-const getStyles = (theme: MD3Theme) =>
+const getStyles = (theme: MD3Theme, safeAreaInsets: { top: number; bottom: number }) =>
   StyleSheet.create({
     modalContainer: {
       margin: 0,
@@ -32,9 +33,12 @@ const getStyles = (theme: MD3Theme) =>
     },
     modalContent: {
       width: '100%',
+      maxHeight: '90%',
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       overflow: 'hidden',
+      paddingTop: Platform.OS === 'ios' ? safeAreaInsets.top : 0,
+      paddingBottom: Platform.OS === 'ios' ? safeAreaInsets.bottom : 0,
     },
     amountContainer: {
       paddingVertical: 32,
@@ -44,7 +48,7 @@ const getStyles = (theme: MD3Theme) =>
     },
     keypadContainer: {
       paddingHorizontal: 24,
-      paddingBottom: 16,
+      paddingBottom: 8,
       backgroundColor: theme.colors.elevation.level1,
     },
     keypadRow: {
@@ -73,15 +77,22 @@ const getStyles = (theme: MD3Theme) =>
     },
     actionButtonsContainer: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'space-evenly',
       paddingHorizontal: 24,
-      paddingVertical: 16,
+      paddingVertical: 24,
+      paddingBottom: Platform.OS === 'ios' ? 40 : 32,
       borderTopWidth: 1,
       borderTopColor: theme.colors.outline,
       backgroundColor: theme.colors.elevation.level1,
+      gap: 16,
+    },
+    cancelButton: {
+      flex: 1,
+      minHeight: 48,
     },
     enterButton: {
-      paddingHorizontal: 24,
+      flex: 1,
+      minHeight: 48,
     },
   });
 
@@ -93,7 +104,8 @@ export default function AmountModal({
   setAmount: setParentAmount,
 }: AmountProps) {
   const theme = useTheme();
-  const styles = getStyles(theme);
+  const safeAreaInsets = useSafeAreaInsets();
+  const styles = getStyles(theme, safeAreaInsets);
   const [localAmount, setLocalAmount] = useState(initialAmount);
 
   // Reset local amount when modal becomes visible
@@ -189,10 +201,12 @@ export default function AmountModal({
         <ThemedView style={styles.actionButtonsContainer}>
           <UniversalButton
             variant="ghost"
-            size="medium"
+            size="large"
             onPress={onClose}
             icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
             iconPosition="left"
+            style={styles.cancelButton}
+
           >
             Cancel
           </UniversalButton>
@@ -203,6 +217,7 @@ export default function AmountModal({
             icon={<IconSymbol name="check" size={20} color={theme.colors.onPrimary} />}
             iconPosition="left"
             style={styles.enterButton}
+
           >
             Enter
           </UniversalButton>

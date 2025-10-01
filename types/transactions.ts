@@ -11,6 +11,10 @@ export type Transaction = {
   createdAt: Timestamp;
   createdBy: string;
   groupId?: string | null;
+  categoryId?: string;
+  categoryName?: string;
+  categoryIcon?: string;
+  categoryColor?: string;
 };
 
 // Encrypted transaction stored in database
@@ -23,6 +27,10 @@ export type EncryptedTransaction = {
   createdAt: Timestamp;
   createdBy: string;
   groupId?: string | null;
+  categoryId?: string;
+  categoryName?: string;
+  categoryIcon?: string;
+  categoryColor?: string;
 };
 
 export type TransactionInput = Omit<Transaction, 'createdAt' | 'id'>;

@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { en, registerTranslation } from 'react-native-paper-dates';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { darkTheme, lightTheme } from '@/constants/theme';
 
@@ -59,11 +60,13 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <RootLayoutContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RootLayoutContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -91,7 +94,7 @@ function RootLayoutContent() {
     >
       <PaperProvider theme={isDark ? darkTheme : lightTheme}>
         <RootLayoutNav />
-        <StatusBar style={isDark ? 'light' : 'dark'} translucent />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
       </PaperProvider>
     </View>
   );

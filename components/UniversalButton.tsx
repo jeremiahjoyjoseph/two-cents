@@ -113,18 +113,23 @@ export function UniversalButton({
       justifyContent: 'center',
       flexDirection: 'row',
       opacity: disabled ? 0.5 : 1,
+    };
+
+    // Only apply shadow/elevation for non-ghost variants
+    const shadowStyles: ViewStyle = variant !== 'ghost' ? {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 2,
-    };
+    } : {};
 
     const sizeStyles = getSizeStyles();
     const variantStyles = getVariantStyles();
 
     return {
       ...baseStyles,
+      ...shadowStyles,
       ...sizeStyles,
       ...variantStyles,
       ...(fullWidth && { width: '100%' }),

@@ -4,12 +4,16 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { TextInput, useTheme } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 
+import { CategoryPickerModal } from '@/components/CategoryPickerModal';
+import { CreateCategoryModal } from '@/components/CreateCategoryModal';
 import Price from '@/components/Price';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { addTransaction, deleteTransaction, updateTransaction } from '@/lib/api/transactions';
+import { useCategories } from '@/lib/hooks/useCategories';
+import { Category } from '@/types/category';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AmountModal from './components/AmountModal';
@@ -79,6 +83,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  categoryButton: {
+    paddingVertical: 12,
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  categoryText: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+  },
 });
 
 export default function Transaction() {
@@ -87,6 +107,7 @@ export default function Transaction() {
   const params = useLocalSearchParams();
   const { user, getEncryptionKey, getGroupEncryptionKey } = useAuth();
   const [isModalVisible, setModalVisible] = useState(!params.id);
+  const [hasUserEnteredAmount, setHasUserEnteredAmount] = useState(false);
   const [amount, setAmount] = useState(params.amount?.toString() || '0');
   const [title, setTitle] = useState(params.title?.toString() || '');
   const [isTransactionTypeModalVisible, setTransactionTypeModalVisible] = useState(false);
@@ -113,6 +134,51 @@ export default function Transaction() {
   });
 
   const [open, setOpen] = useState(false);
+  
+  // Category selection state
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(() => {
+    if (params.categoryName && params.categoryIcon && params.categoryColor) {
+      return {
+        id: 'existing',
+        name: params.categoryName.toString(),
+        icon: params.categoryIcon.toString(),
+        color: params.categoryColor.toString(),
+      };
+    }
+    return null;
+  });
+  const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
+  const [isCreateCategoryVisible, setIsCreateCategoryVisible] = useState(false);
+  const [userDismissedCategoryPicker, setUserDismissedCategoryPicker] = useState(false);
+
+  
+  // Get categories from hook
+  const { categories, createCategory } = useCategories(user?.uid || '');
+  
+  // Auto-popup category selection when amount is entered
+  React.useEffect(() => {
+    const amountValue = parseFloat(amount);
+    
+    // Only auto-open if amount is valid, no category selected, amount modal is closed, user has entered amount, and user hasn't manually dismissed the picker
+    if (amountValue > 0 && 
+        !selectedCategory && 
+        !isCategoryPickerVisible && 
+        !isCreateCategoryVisible &&
+        !isModalVisible &&
+        hasUserEnteredAmount &&
+        !userDismissedCategoryPicker) {
+      // Small delay to ensure amount modal is closed first
+      const timer = setTimeout(() => {
+        setIsCategoryPickerVisible(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [amount, selectedCategory, isCategoryPickerVisible, isCreateCategoryVisible, isModalVisible, hasUserEnteredAmount, userDismissedCategoryPicker]);
+
+  // Reset the dismissed flag when amount changes
+  React.useEffect(() => {
+    setUserDismissedCategoryPicker(false);
+  }, [amount]);
 
   const onDismissSingle = useCallback(() => {
     setOpen(false);
@@ -177,6 +243,11 @@ export default function Transaction() {
         date: date,
         createdBy: user.uid,
         groupId: user.linkedGroupId || null,
+        // Include category information if selected
+        categoryId: selectedCategory?.id,
+        categoryName: selectedCategory?.name,
+        categoryIcon: selectedCategory?.icon,
+        categoryColor: selectedCategory?.color,
       };
 
       const groupId = user?.linkedGroupId || null;
@@ -283,6 +354,23 @@ export default function Transaction() {
             placeholderTextColor={theme.colors.onSurfaceDisabled}
           />
 
+          {/* Category Selection */}
+          <TouchableOpacity 
+            onPress={() => setIsCategoryPickerVisible(true)} 
+            style={styles.categoryButton}
+          >
+            <View style={styles.categoryContent}>
+              <IconSymbol 
+                name={selectedCategory ? selectedCategory.icon as any : 'category'} 
+                size={24} 
+                color={selectedCategory ? selectedCategory.color : theme.colors.primary} 
+              />
+              <ThemedText style={styles.categoryText}>
+                {selectedCategory ? selectedCategory.name : 'Select Category'}
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={() => setOpen(true)} style={styles.datePickerButton}>
             <View style={styles.datePickerContent}>
               <IconSymbol name="calendar-today" size={24} color={theme.colors.primary} />
@@ -310,7 +398,10 @@ export default function Transaction() {
         isVisible={isModalVisible}
         onClose={() => setModalVisible(false)}
         amount={amount}
-        setAmount={setAmount}
+        setAmount={(newAmount) => {
+          setAmount(newAmount);
+          setHasUserEnteredAmount(true);
+        }}
       />
       <TransactionTypeModal
         isVisible={isTransactionTypeModalVisible}
@@ -326,6 +417,31 @@ export default function Transaction() {
         onDismiss={onDismissSingle}
         date={new Date(date + 'T00:00:00')}
         onConfirm={onConfirmSingle}
+      />
+      <CategoryPickerModal
+        visible={isCategoryPickerVisible}
+        onClose={() => {
+          setIsCategoryPickerVisible(false);
+          setUserDismissedCategoryPicker(true);
+        }}
+        onSelectCategory={(category) => {
+          setSelectedCategory(category);
+          setUserDismissedCategoryPicker(false); // Reset flag when category is selected
+        }}
+        categories={categories}
+        onCreateCustom={() => {
+          // Close category picker first
+          setIsCategoryPickerVisible(false);
+          // Use a longer delay to ensure the first modal is fully closed
+          setTimeout(() => {
+            setIsCreateCategoryVisible(true);
+          }, 500);
+        }}
+      />
+      <CreateCategoryModal
+        visible={isCreateCategoryVisible}
+        onClose={() => setIsCreateCategoryVisible(false)}
+        onCreateCategory={createCategory}
       />
     </>
   );
