@@ -48,6 +48,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="report"
+        options={{
+          title: 'Reports',
+          tabBarButton: props => (
+            <TabBarButton {...props} focused={props.accessibilityState?.selected} />
+          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bar-chart" color={color} />,
+          tabBarLabel: ({ focused, color, children }) => (
+            <Text style={{ color, fontWeight: focused ? 'bold' : 'normal' }}>{children}</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="Profile"
         options={{
           title: 'Profile',

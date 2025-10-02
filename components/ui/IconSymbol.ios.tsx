@@ -45,6 +45,10 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   'water-drop': 'drop',
   'cleaning-services': 'sparkles',
   'category': 'square.grid.2x2',
+  'bar-chart': 'chart.bar',
+  'expand-more': 'chevron.down',
+  'trending-up': 'arrow.up.right',
+  'trending-down': 'arrow.down.right',
 };
 
 export function IconSymbol({

@@ -4,7 +4,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { TextInput, useTheme } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 
-import { CategoryPickerModal } from '@/components/CategoryPickerModal';
+import CategoryPickerModal from '@/components/CategoryPickerModal';
 import { CreateCategoryModal } from '@/components/CreateCategoryModal';
 import Price from '@/components/Price';
 import { ThemedText } from '@/components/ThemedText';

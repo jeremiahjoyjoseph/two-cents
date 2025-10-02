@@ -223,6 +223,7 @@ export default function Home() {
               { backgroundColor: theme.colors.surfaceVariant },
             ]}
           >
+            <IconSymbol name="calendar-today" size={16} color={theme.colors.onSurface} />
             <ThemedText style={[styles.stickyHeaderMonthText, { color: theme.colors.onSurface }]}>
               {monthLabel}
             </ThemedText>
@@ -251,6 +252,7 @@ export default function Home() {
               { backgroundColor: theme.colors.surfaceVariant },
             ]}
           >
+            <IconSymbol name="calendar-today" size={16} color={theme.colors.onSurface} />
             <ThemedText style={[styles.stickyHeaderMonthText, { color: theme.colors.onSurface }]}>
               {monthLabel}
             </ThemedText>
@@ -377,6 +379,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     minHeight: 48,
+    gap: 8,
   },
   stickyHeaderMonthText: {
     fontWeight: 'bold',
