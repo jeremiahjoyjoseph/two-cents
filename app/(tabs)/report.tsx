@@ -7,9 +7,52 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useReportData } from '@/lib/hooks/useReportData';
 import React, { useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PieChart } from 'react-native-gifted-charts';
 import { Card, useTheme } from 'react-native-paper';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PieChart } from 'react-native-svg-charts';
+
+// Utility function to ensure iOS-compatible color format
+const normalizeColor = (color: string): string => {
+  if (!color) return '#000000';
+  
+  // Remove any whitespace
+  const cleanColor = color.trim();
+  
+  // If color is already a valid 6-digit hex, return it
+  if (/^#[0-9A-Fa-f]{6}$/.test(cleanColor)) {
+    return cleanColor;
+  }
+  
+  // If color is a 3-digit hex, expand it
+  if (/^#[0-9A-Fa-f]{3}$/.test(cleanColor)) {
+    const r = cleanColor[1];
+    const g = cleanColor[2];
+    const b = cleanColor[3];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  
+  // If color doesn't start with #, add it
+  if (!cleanColor.startsWith('#')) {
+    return `#${cleanColor}`;
+  }
+  
+  // Default fallback
+  return '#000000';
+};
+
+// Utility function to create iOS-compatible color with opacity
+const createColorWithOpacity = (color: string, opacity: number = 0.2): string => {
+  const normalizedColor = normalizeColor(color);
+  
+  // Convert hex to RGB
+  const hex = normalizedColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Return rgba format for iOS compatibility
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -42,6 +85,7 @@ export default function ReportScreen() {
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedPieSlice, setSelectedPieSlice] = useState<number | null>(null);
 
   // Prepare pie chart data
   const pieChartData = pieData.map((item, index) => ({
@@ -383,27 +427,37 @@ export default function ReportScreen() {
         {pieData.length > 0 && (
           <Card style={[styles.chartCard, { backgroundColor: theme.colors.surface }]}>
             <Card.Content>
-              <Text style={[styles.chartTitle, { color: theme.colors.onSurface }]}>
-                Spending by Category
-              </Text>
+              <View style={styles.chartTitleContainer}>
+                <Text style={[styles.chartTitle, { color: theme.colors.onSurface }]}>
+                  Spending by Category
+                </Text>
+                <Text style={[styles.chartSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                  Tap a slice to see label
+                </Text>
+              </View>
               <View style={styles.pieChartContainer}>
                 {pieData && pieData.length > 0 ? (
                   <PieChart
-                    style={{ height: 200, width: 200 }}
-                    data={pieData.map((item, index) => {
-                      // Create a completely new object with only the required properties
-                      const total = item.total;
-                      const color = item.color;
-                      const key = `pie-${index}`;
-                      
-                      return {
-                        value: total,
-                        svg: { fill: color },
-                        key: key,
-                      };
-                    })}
-                    innerRadius={0}
-                    outerRadius={90}
+                    data={pieData
+                      .filter(item => item && item.total > 0)
+                      .map((item, index) => ({
+                        value: Number(item.total || 0),
+                        color: normalizeColor(item.color || '#000000'),
+                        text: selectedPieSlice === index ? String(item.categoryName || 'Unknown') : '',
+                        textColor: theme.colors.onSurface,
+                        textBackgroundColor: 'transparent',
+                        textSize: 12,
+                        onPress: () => setSelectedPieSlice(selectedPieSlice === index ? null : index),
+                        focused: selectedPieSlice === index,
+                      }))}
+                    radius={100}
+                    innerRadius={30}
+                    showText={selectedPieSlice !== null}
+                    textColor={theme.colors.onSurface}
+                    textSize={12}
+                    showTextBackground
+                    textBackgroundRadius={26}
+                    onPress={(item: any, index: number) => setSelectedPieSlice(selectedPieSlice === index ? null : index)}
                   />
                 ) : (
                   <Text style={[styles.chartTitle, { color: theme.colors.onSurface, textAlign: 'center' }]}>
@@ -417,7 +471,7 @@ export default function ReportScreen() {
                 {pieData.map((category, index) => (
                   <View key={category.categoryId} style={styles.categoryBreakdownItem}>
                     <View style={styles.categoryBreakdownLeft}>
-                      <View style={[styles.categoryColorDot, { backgroundColor: category.color }]} />
+                      <View style={[styles.categoryColorDot, { backgroundColor: normalizeColor(category.color) }]} />
                       <Text style={[styles.categoryBreakdownName, { color: theme.colors.onSurface }]}>
                         {category.categoryName}
                       </Text>
@@ -718,10 +772,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  chartTitleContainer: {
+    marginBottom: 20,
+  },
   chartTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 20,
+    marginBottom: 4,
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   pieChartContainer: {
     alignItems: 'center',
@@ -729,6 +790,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     paddingVertical: 20,
+  },
+  centerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   barChartContainer: {
     alignItems: 'center',
