@@ -2,13 +2,15 @@ import { UniversalButton } from '@/components/UniversalButton';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, BackHandler, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native';
-import { Surface, TextInput } from 'react-native-paper';
+import { TextInput, useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Auth() {
+  const theme = useTheme();
   const { login, register, forgotPassword } = useAuth();
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
@@ -85,27 +87,35 @@ export default function Auth() {
 
   if (showForgotPassword) {
     return (
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <ThemedView style={styles.container}>
-          <Surface style={styles.surface} elevation={4}>
-            <ThemedText type="title" style={styles.title}>
-              Reset Password
-            </ThemedText>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <ThemedView style={styles.container}>
+            <ThemedView style={styles.formSection}>
+              <ThemedText type="title" style={styles.title}>
+                Reset Password
+              </ThemedText>
 
             <ThemedText style={styles.description}>
               Enter your email address and we&apos;ll send you a link to reset your password.
             </ThemedText>
 
             <TextInput
-              label="Email"
+              label=""
               value={email}
               onChangeText={setEmail}
-              mode="outlined"
+              mode="flat"
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholder="Email"
               style={styles.input}
+              underlineColor={theme.colors.outlineVariant}
+              activeUnderlineColor={theme.colors.outlineVariant}
+              contentStyle={styles.inputContent}
+              placeholderTextColor={theme.colors.onSurfaceDisabled}
             />
+          </ThemedView>
 
+          <ThemedView style={styles.buttonSection}>
             <UniversalButton 
               variant="auth" 
               size="xl" 
@@ -124,60 +134,95 @@ export default function Auth() {
             >
               Back to Sign In
             </UniversalButton>
-          </Surface>
-        </ThemedView>
-      </TouchableWithoutFeedback>
+            </ThemedView>
+          </ThemedView>
+        </TouchableWithoutFeedback>
+      </SafeAreaView>
     );
   }
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <ThemedView style={styles.container}>
-        <Surface style={styles.surface} elevation={4}>
-          <ThemedText type="title" style={styles.title}>
-            {isLogin ? 'Sign In' : 'Sign Up'}
-          </ThemedText>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <ThemedView style={styles.container}>
+          <ThemedView style={styles.formSection}>
+            <ThemedText type="title" style={styles.title}>
+              {isLogin ? 'Sign In' : 'Sign Up'}
+            </ThemedText>
 
           {!isLogin && (
             <TextInput
-              label="Name"
+              label=""
               value={name}
               onChangeText={setName}
-              mode="outlined"
+              mode="flat"
+              placeholder="Name"
               style={styles.input}
+              underlineColor={theme.colors.outlineVariant}
+              activeUnderlineColor={theme.colors.outlineVariant}
+              contentStyle={styles.inputContent}
+              placeholderTextColor={theme.colors.onSurfaceDisabled}
             />
           )}
 
           <TextInput
-            label="Email"
+            label=""
             value={email}
             onChangeText={setEmail}
-            mode="outlined"
+            mode="flat"
             keyboardType="email-address"
             autoCapitalize="none"
+            placeholder="Email"
             style={styles.input}
+            underlineColor={theme.colors.outlineVariant}
+            activeUnderlineColor={theme.colors.outlineVariant}
+            contentStyle={styles.inputContent}
+            placeholderTextColor={theme.colors.onSurfaceDisabled}
           />
 
           <TextInput
-            label="Password"
+            label=""
             value={password}
             onChangeText={setPassword}
-            mode="outlined"
+            mode="flat"
             secureTextEntry
+            placeholder="Password"
             style={styles.input}
+            underlineColor={theme.colors.outlineVariant}
+            activeUnderlineColor={theme.colors.outlineVariant}
+            contentStyle={styles.inputContent}
+            placeholderTextColor={theme.colors.onSurfaceDisabled}
           />
 
           {!isLogin && (
             <TextInput
-              label="Confirm Password"
+              label=""
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              mode="outlined"
+              mode="flat"
               secureTextEntry
+              placeholder="Confirm Password"
               style={styles.input}
+              underlineColor={theme.colors.outlineVariant}
+              activeUnderlineColor={theme.colors.outlineVariant}
+              contentStyle={styles.inputContent}
+              placeholderTextColor={theme.colors.onSurfaceDisabled}
             />
           )}
 
+          {isLogin && (
+            <UniversalButton 
+              variant="ghost" 
+              size="medium" 
+              onPress={() => setShowForgotPassword(true)} 
+              style={styles.forgotPasswordButton}
+            >
+              Forgot Password?
+            </UniversalButton>
+          )}
+        </ThemedView>
+
+        <ThemedView style={styles.buttonSection}>
           <UniversalButton 
             variant="auth" 
             size="xl" 
@@ -188,17 +233,6 @@ export default function Auth() {
             {isLogin ? 'Sign In' : 'Sign Up'}
           </UniversalButton>
 
-        {isLogin && (
-          <UniversalButton 
-            variant="ghost" 
-            size="medium" 
-            onPress={() => setShowForgotPassword(true)} 
-            style={styles.forgotPasswordButton}
-          >
-            Forgot Password?
-          </UniversalButton>
-        )}
-
           <UniversalButton 
             variant="ghost" 
             size="medium" 
@@ -207,9 +241,10 @@ export default function Auth() {
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
           </UniversalButton>
-        </Surface>
-      </ThemedView>
-    </TouchableWithoutFeedback>
+          </ThemedView>
+        </ThemedView>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }
 
@@ -219,34 +254,54 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
-    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    justifyContent: 'space-between',
   },
-  surface: {
-    padding: 24,
-    borderRadius: 10,
+  formSection: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  buttonSection: {
+    marginTop: 'auto',
+    paddingTop: 24,
   },
   title: {
-    textAlign: 'center',
-    marginBottom: 24,
+    textAlign: 'left',
+    marginBottom: 32,
     paddingTop: 8,
+    fontSize: 32,
+    fontWeight: 'bold',
   },
   description: {
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 24,
     opacity: 0.7,
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 24,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingBottom: 8,
+  },
+  inputContent: {
+    fontSize: 18,
+    fontWeight: '600',
+    paddingBottom: 8,
   },
   button: {
     marginTop: 8,
   },
   forgotPasswordButton: {
-    marginTop: 8,
-    alignSelf: 'center',
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 0,
+    paddingLeft: 0,
+    marginLeft: 0,
   },
   switchButton: {
     marginTop: 16,
+    alignSelf: 'center',
   },
 });

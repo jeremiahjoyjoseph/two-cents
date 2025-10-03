@@ -2,13 +2,16 @@ import { UniversalButton } from '@/components/UniversalButton';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import { TextInput, useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AuthTextField } from '@/components/AuthTextField';
+import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function NameCollection() {
+  const theme = useTheme();
   const { updateUser, setUser } = useAuth();
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -69,51 +72,89 @@ export default function NameCollection() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ThemedView style={styles.container}>
-        <AuthTextField
-          value={name}
-          onChangeText={setName}
-          placeholder="Name"
-          autoCapitalize="words"
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit}
-          autoFocus={true}
-          style={styles.nameInput}
-        />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ThemedView style={styles.container}>
+          <ThemedView style={styles.formSection}>
+            <ThemedText type="title" style={styles.title}>
+              What's your name?
+            </ThemedText>
+          
+          <TextInput
+            label=""
+            value={name}
+            onChangeText={setName}
+            mode="flat"
+            placeholder="Name"
+            autoCapitalize="words"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+            autoFocus={true}
+            style={styles.nameInput}
+            underlineColor={theme.colors.outlineVariant}
+            activeUnderlineColor={theme.colors.outlineVariant}
+            contentStyle={styles.inputContent}
+            placeholderTextColor={theme.colors.onSurfaceDisabled}
+          />
+        </ThemedView>
 
-        <UniversalButton 
-          variant="auth" 
-          size="xl" 
-          onPress={handleSubmit} 
-          style={styles.continueButton}
-          loading={isLoading}
-          disabled={isLoading}
-          fullWidth
-        >
-          Continue
-        </UniversalButton>
-      </ThemedView>
-    </TouchableWithoutFeedback>
+        <ThemedView style={styles.buttonSection}>
+          <UniversalButton 
+            variant="auth" 
+            size="xl" 
+            onPress={handleSubmit} 
+            style={styles.continueButton}
+            loading={isLoading}
+            disabled={isLoading}
+            fullWidth
+          >
+            Continue
+          </UniversalButton>
+          </ThemedView>
+        </ThemedView>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 20,
-    paddingTop: 100,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    justifyContent: 'space-between',
+  },
+  formSection: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  buttonSection: {
+    marginTop: 'auto',
+    paddingTop: 24,
+  },
+  title: {
+    textAlign: 'left',
+    marginBottom: 32,
+    paddingTop: 8,
+    fontSize: 32,
+    fontWeight: 'bold',
   },
   nameInput: {
-    marginBottom: 40,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingBottom: 8,
+    marginBottom: 24,
+  },
+  inputContent: {
+    fontSize: 18,
+    fontWeight: '600',
+    paddingBottom: 8,
   },
   continueButton: {
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    paddingVertical: 12,
-    marginTop: 'auto',
-    marginBottom: 20,
+    marginTop: 8,
   },
 });

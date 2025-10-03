@@ -30,6 +30,7 @@ const getStyles = (theme: MD3Theme, safeAreaInsets: { top: number; bottom: numbe
     modalContainer: {
       margin: 0,
       justifyContent: 'flex-end',
+      paddingTop: 0,
     },
     modalContent: {
       width: '100%',
@@ -37,11 +38,12 @@ const getStyles = (theme: MD3Theme, safeAreaInsets: { top: number; bottom: numbe
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       overflow: 'hidden',
-      paddingTop: Platform.OS === 'ios' ? safeAreaInsets.top : 0,
+      paddingTop: 0,
       paddingBottom: Platform.OS === 'ios' ? safeAreaInsets.bottom : 0,
     },
     amountContainer: {
       paddingVertical: 32,
+      paddingTop: 24,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.colors.elevation.level1,
