@@ -1,14 +1,15 @@
 import { firestore } from '@/config/firebase';
 import { Category } from '@/types/category';
 import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    onSnapshot,
-    orderBy,
-    query,
-    Unsubscribe,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  Unsubscribe,
+  updateDoc,
 } from 'firebase/firestore';
 
 /**
@@ -42,6 +43,22 @@ export const createCategory = async (
   const categoriesRef = collection(firestore, `users/${userId}/categories`);
   
   await addDoc(categoriesRef, {
+    name: category.name,
+    icon: category.icon,
+    color: category.color,
+  });
+};
+
+/**
+ * Update a custom category
+ */
+export const updateCategory = async (
+  userId: string,
+  categoryId: string,
+  category: Omit<Category, 'id'>
+): Promise<void> => {
+  const categoryRef = doc(firestore, `users/${userId}/categories`, categoryId);
+  await updateDoc(categoryRef, {
     name: category.name,
     icon: category.icon,
     color: category.color,

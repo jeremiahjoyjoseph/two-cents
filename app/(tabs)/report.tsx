@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { Card, useTheme } from 'react-native-paper';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Utility function to ensure iOS-compatible color format
 const normalizeColor = (color: string): string => {
@@ -58,7 +58,6 @@ const screenWidth = Dimensions.get('window').width;
 
 export default function ReportScreen() {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   
   const {
@@ -181,7 +180,7 @@ export default function ReportScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}

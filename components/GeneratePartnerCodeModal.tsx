@@ -58,10 +58,14 @@ const getStyles = (theme: MD3Theme) =>
     },
     actionButtonsContainer: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingTop: 16,
+      justifyContent: 'space-evenly',
+      paddingHorizontal: 24,
+      paddingVertical: 24,
+      paddingBottom: 40,
       borderTopWidth: 1,
       borderTopColor: theme.colors.outline,
+      backgroundColor: theme.colors.elevation.level1,
+      gap: 16,
     },
     error: {
       marginBottom: 24,

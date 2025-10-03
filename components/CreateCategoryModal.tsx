@@ -4,15 +4,13 @@ import { Category } from '@/types/category';
 import React, { useState } from 'react';
 import {
   Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import Modal from 'react-native-modal';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { UniversalButton } from './UniversalButton';
@@ -22,20 +20,68 @@ type CreateCategoryModalProps = {
   visible: boolean;
   onClose: () => void;
   onCreateCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  editingCategory?: Category | null;
+  onUpdateCategory?: (categoryId: string, category: Omit<Category, 'id'>) => Promise<void>;
 };
 
 export const CreateCategoryModal = ({
   visible,
   onClose,
   onCreateCategory,
+  editingCategory,
+  onUpdateCategory,
 }: CreateCategoryModalProps) => {
   const theme = useTheme();
-  const safeAreaInsets = useSafeAreaInsets();
-  const styles = getStyles(theme, safeAreaInsets);
+  const styles = getStyles(theme);
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(CATEGORY_ICON_OPTIONS[0]);
   const [selectedColor, setSelectedColor] = useState(CATEGORY_COLOR_OPTIONS[0]);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Initialize form with editing category data
+  React.useEffect(() => {
+    if (editingCategory) {
+      setName(editingCategory.name);
+      setSelectedIcon(editingCategory.icon);
+      setSelectedColor(editingCategory.color);
+    } else {
+      setName('');
+      setSelectedIcon(CATEGORY_ICON_OPTIONS[0]);
+      setSelectedColor(CATEGORY_COLOR_OPTIONS[0]);
+    }
+  }, [editingCategory, visible]);
+
+  // Function to determine if a color is light or dark
+  const isLightColor = (color: string) => {
+    // Remove # if present
+    const hex = color.replace('#', '');
+    // Convert to RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5;
+  };
+
+  // Accessibility labels for icons
+  const getIconLabel = (icon: string) => {
+    const labels: { [key: string]: string } = {
+      'home': 'Rent / Housing',
+      'local-grocery-store': 'Groceries',
+      'restaurant': 'Food / Dining',
+      'commute': 'Travel / Fuel',
+      'shopping-bag': 'Shopping',
+      'payments': 'Loan / EMI / Bills',
+      'pets': 'Pets / Misc',
+      'favorite': 'Self-care / Luxuries',
+      'medical-services': 'Health',
+      'savings': 'Income / Savings',
+      'subscriptions': 'Subscriptions / OTT',
+      'category': 'Catch-all / Other',
+    };
+    return labels[icon] || icon;
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -50,11 +96,19 @@ export const CreateCategoryModal = ({
 
     setIsCreating(true);
     try {
-      await onCreateCategory({
+      const categoryData = {
         name: name.trim(),
         icon: selectedIcon,
         color: selectedColor,
-      });
+      };
+
+      if (editingCategory && onUpdateCategory) {
+        // Update existing category
+        await onUpdateCategory(editingCategory.id, categoryData);
+      } else {
+        // Create new category
+        await onCreateCategory(categoryData);
+      }
       
       // Reset form
       setName('');
@@ -62,8 +116,8 @@ export const CreateCategoryModal = ({
       setSelectedColor(CATEGORY_COLOR_OPTIONS[0]);
       onClose();
     } catch (err) {
-      console.error('Failed to create category:', err);
-      Alert.alert('Error', 'Failed to create category. Please try again.');
+      console.error('Failed to save category:', err);
+      Alert.alert('Error', 'Failed to save category. Please try again.');
     } finally {
       setIsCreating(false);
     }
@@ -90,14 +144,36 @@ export const CreateCategoryModal = ({
       <ThemedView style={[styles.modalContent, { backgroundColor: theme.colors.elevation.level3 }]}>
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
-            Create Custom Category
+            {editingCategory ? 'Edit Category' : 'Create Custom Category'}
           </ThemedText>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <IconSymbol name="close" size={24} color={theme.colors.onSurface} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Sticky Preview Section */}
+        <View style={[styles.stickyPreview, { 
+          backgroundColor: theme.colors.elevation.level3,
+          borderBottomColor: theme.colors.outline 
+        }]}>
+          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+            Preview
+          </ThemedText>
+          <View style={styles.preview}>
+            <View style={[styles.previewIcon, { backgroundColor: `${selectedColor}30` }]}>
+              <IconSymbol name={selectedIcon as any} size={24} color={selectedColor} />
+            </View>
+            <ThemedText type="defaultSemiBold" style={styles.previewText}>
+              {name || 'Category Name'}
+            </ThemedText>
+          </View>
+        </View>
+
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Category Name Input */}
           <View style={styles.section}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
@@ -132,6 +208,9 @@ export const CreateCategoryModal = ({
                     { borderColor: selectedIcon === icon ? selectedColor : theme.colors.outline }
                   ]}
                   onPress={() => setSelectedIcon(icon)}
+                  accessibilityLabel={getIconLabel(icon)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedIcon === icon }}
                 >
                   <IconSymbol 
                     name={icon as any} 
@@ -148,7 +227,11 @@ export const CreateCategoryModal = ({
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
               Choose Color
             </ThemedText>
-            <View style={styles.colorsGrid}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.colorsScrollContainer}
+            >
               {CATEGORY_COLOR_OPTIONS.map((color) => (
                 <TouchableOpacity
                   key={color}
@@ -158,28 +241,28 @@ export const CreateCategoryModal = ({
                     selectedColor === color && styles.selectedColorOption,
                   ]}
                   onPress={() => setSelectedColor(color)}
+                  accessibilityLabel={`Color ${color}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedColor === color }}
                 >
                   {selectedColor === color && (
-                    <IconSymbol name="check" size={16} color={theme.colors.onSurface} />
+                    <View style={[
+                      styles.selectionIndicator,
+                      { 
+                        backgroundColor: isLightColor(color) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)',
+                        borderColor: isLightColor(color) ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)'
+                      }
+                    ]}>
+                      <IconSymbol 
+                        name="check" 
+                        size={20} 
+                        color={isLightColor(color) ? 'white' : 'black'} 
+                      />
+                    </View>
                   )}
                 </TouchableOpacity>
               ))}
-            </View>
-          </View>
-
-          {/* Preview */}
-          <View style={styles.section}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Preview
-            </ThemedText>
-            <View style={styles.preview}>
-              <View style={[styles.previewIcon, { backgroundColor: `${selectedColor}20` }]}>
-                <IconSymbol name={selectedIcon as any} size={24} color={selectedColor} />
-              </View>
-              <ThemedText type="defaultSemiBold" style={styles.previewText}>
-                {name || 'Category Name'}
-              </ThemedText>
-            </View>
+            </ScrollView>
           </View>
         </ScrollView>
 
@@ -200,7 +283,10 @@ export const CreateCategoryModal = ({
             loading={isCreating}
             style={styles.createButton}
           >
-            {isCreating ? "Creating..." : "Create Category"}
+            {isCreating 
+              ? (editingCategory ? "Updating..." : "Creating...") 
+              : (editingCategory ? "Update Category" : "Create Category")
+            }
           </UniversalButton>
         </View>
       </ThemedView>
@@ -208,20 +294,20 @@ export const CreateCategoryModal = ({
   );
 };
 
-const getStyles = (theme: any, safeAreaInsets: { top: number; bottom: number }) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   modalContainer: {
     margin: 0,
     justifyContent: 'flex-end',
     paddingHorizontal: 0,
+    paddingBottom: 0,
   },
   modalContent: {
     width: '100%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
-    height: '85%',
-
-    paddingBottom: Platform.OS === 'ios' ? safeAreaInsets.bottom : 0,
+    height: '90%',
+    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',
@@ -240,18 +326,25 @@ const getStyles = (theme: any, safeAreaInsets: { top: number; bottom: number }) 
   closeButton: {
     padding: 4,
   },
+  stickyPreview: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingBottom: 20,
+  },
+  scrollContent: {
+    paddingBottom: 48, // Increased padding to ensure all content is visible
   },
   section: {
-    marginVertical: 20,
+    marginVertical: 16,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 8,
     color: theme.colors.onSurface,
   },
   input: {
@@ -266,39 +359,58 @@ const getStyles = (theme: any, safeAreaInsets: { top: number; bottom: number }) 
   iconsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 4,
+    minHeight: 120, // Adjusted height for 2x circular icons
   },
   iconOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 48, // 2x bigger
+    height: 48, // 2x bigger
+    borderRadius: 24, // Perfect circle
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: theme.colors.surface,
   },
   selectedIconOption: {
     backgroundColor: theme.colors.primaryContainer,
   },
-  colorsGrid: {
+  colorsScrollContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    gap: 16,
   },
   colorOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48, // 2x bigger (24 * 2)
+    height: 48, // 2x bigger (24 * 2)
+    borderRadius: 24, // Perfect circle
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   selectedColorOption: {
-    borderColor: theme.colors.onSurface,
-    borderWidth: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
   },
   preview: {
     flexDirection: 'row',
@@ -323,11 +435,13 @@ const getStyles = (theme: any, safeAreaInsets: { top: number; bottom: number }) 
   },
   footer: {
     flexDirection: 'row',
+    justifyContent: 'space-evenly',
     paddingHorizontal: 24,
-    paddingVertical: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 32,
+    paddingVertical: 32,
+    paddingBottom: 60,
     borderTopWidth: 1,
     borderTopColor: theme.colors.outline,
+    backgroundColor: theme.colors.elevation.level1,
     gap: 16,
   },
   cancelButton: {

@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { FAB, useTheme } from 'react-native-paper';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MonthRangeModal from '../../components/MonthRangeModal';
 
 const groupTransactionsByDate = (transactions: Transaction[]) => {
@@ -101,7 +101,6 @@ export default function Home() {
   const [selectedType, setSelectedType] = useState<'income' | 'expense' | null>(null);
   const tabBarHeight = useBottomTabBarHeight();
   const [showStickyHeader, setShowStickyHeader] = useState(false);
-  const insets = useSafeAreaInsets();
   const [monthModalVisible, setMonthModalVisible] = useState(false);
 
   // Development testing - run on app load
@@ -202,7 +201,7 @@ export default function Home() {
             styles.stickyHeader,
             {
               backgroundColor: theme.colors.background,
-              paddingTop: insets.top + 8,
+              paddingTop: 50,
               borderBottomColor: theme.colors.surfaceVariant,
             },
           ]}
@@ -230,7 +229,7 @@ export default function Home() {
           </TouchableOpacity>
         </View>
       )}
-      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + insets.bottom + 20 }} onScroll={handleScroll}>
+      <ParallaxScrollView style={{ paddingBottom: tabBarHeight + 40 }} onScroll={handleScroll}>
         <ThemedView style={styles.container}>
           <Price
             value={getTotalIncome() - getTotalExpense()}

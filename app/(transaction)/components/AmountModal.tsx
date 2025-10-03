@@ -1,9 +1,8 @@
 import { UniversalButton } from '@/components/UniversalButton';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { MD3Theme, useTheme } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Price from '@/components/Price';
 import { ThemedText } from '@/components/ThemedText';
@@ -25,7 +24,7 @@ interface AmountProps {
   setAmount: (amount: string) => void;
 }
 
-const getStyles = (theme: MD3Theme, safeAreaInsets: { top: number; bottom: number }) =>
+const getStyles = (theme: MD3Theme) =>
   StyleSheet.create({
     modalContainer: {
       margin: 0,
@@ -39,7 +38,7 @@ const getStyles = (theme: MD3Theme, safeAreaInsets: { top: number; bottom: numbe
       borderTopRightRadius: 20,
       overflow: 'hidden',
       paddingTop: 0,
-      paddingBottom: Platform.OS === 'ios' ? safeAreaInsets.bottom : 0,
+      paddingBottom: 20,
     },
     amountContainer: {
       paddingVertical: 32,
@@ -82,7 +81,7 @@ const getStyles = (theme: MD3Theme, safeAreaInsets: { top: number; bottom: numbe
       justifyContent: 'space-evenly',
       paddingHorizontal: 24,
       paddingVertical: 24,
-      paddingBottom: Platform.OS === 'ios' ? 40 : 32,
+      paddingBottom: 40,
       borderTopWidth: 1,
       borderTopColor: theme.colors.outline,
       backgroundColor: theme.colors.elevation.level1,
@@ -106,8 +105,7 @@ export default function AmountModal({
   setAmount: setParentAmount,
 }: AmountProps) {
   const theme = useTheme();
-  const safeAreaInsets = useSafeAreaInsets();
-  const styles = getStyles(theme, safeAreaInsets);
+  const styles = getStyles(theme);
   const [localAmount, setLocalAmount] = useState(initialAmount);
 
   // Reset local amount when modal becomes visible

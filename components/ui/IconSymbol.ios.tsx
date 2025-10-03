@@ -49,6 +49,16 @@ const iconNameMap: Record<string, SymbolViewProps['name']> = {
   'expand-more': 'chevron.down',
   'trending-up': 'arrow.up.right',
   'trending-down': 'arrow.down.right',
+  // New category icons
+  'commute': 'car',
+  'payments': 'creditcard',
+  'pets': 'pawprint',
+  'favorite': 'heart',
+  'medical-services': 'cross.case',
+  'savings': 'banknote',
+  'subscriptions': 'repeat',
+  // Action icons
+  'edit': 'pencil',
 };
 
 export function IconSymbol({

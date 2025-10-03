@@ -1,9 +1,11 @@
+import { CreateCategoryModal } from '@/components/CreateCategoryModal';
 import { ThemedView } from '@/components/ThemedView';
+import { UniversalButton } from '@/components/UniversalButton';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, useTheme } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
 
 interface CategoryPickerModalProps {
   visible: boolean;
@@ -11,6 +13,9 @@ interface CategoryPickerModalProps {
   onSelectCategory: (category: any) => void;
   categories: any[];
   onCreateCustom: () => void;
+  onUpdateCategory?: (categoryId: string, updatedCategory: any) => Promise<void>;
+  onCategoriesUpdated?: () => void;
+  currentSelectedCategory?: any;
 }
 
 export default function CategoryPickerModal({
@@ -19,13 +24,60 @@ export default function CategoryPickerModal({
   onSelectCategory,
   categories,
   onCreateCustom,
+  onUpdateCategory,
+  onCategoriesUpdated,
+  currentSelectedCategory,
 }: CategoryPickerModalProps) {
   const theme = useTheme();
+  const styles = getStyles(theme);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
 
   const handleCategorySelect = (category: any) => {
-    onSelectCategory(category);
+    setSelectedCategory(category);
+  };
+
+  const handleConfirmSelection = () => {
+    if (selectedCategory) {
+      onSelectCategory(selectedCategory);
+      onClose();
+    }
+  };
+
+  const handleCancel = () => {
+    setSelectedCategory(null);
     onClose();
   };
+
+  const handleEditCategory = (category: any) => {
+    setEditingCategory(category);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateCategory = async (updatedCategory: any) => {
+    if (onUpdateCategory && editingCategory) {
+      await onUpdateCategory(editingCategory.id, updatedCategory);
+      // Notify parent component to refresh categories
+      if (onCategoriesUpdated) {
+        onCategoriesUpdated();
+      }
+    }
+    setEditModalVisible(false);
+    setEditingCategory(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalVisible(false);
+    setEditingCategory(null);
+  };
+
+  // Auto-highlight current selected category when modal opens
+  React.useEffect(() => {
+    if (visible) {
+      setSelectedCategory(currentSelectedCategory || null);
+    }
+  }, [visible, currentSelectedCategory]);
 
   return (
     <Modal
@@ -40,24 +92,40 @@ export default function CategoryPickerModal({
       useNativeDriver
     >
       <ThemedView style={[styles.container, { backgroundColor: theme.colors.elevation.level1 }]}>
-        <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-          Select Category
-        </Text>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+            Select Category
+          </Text>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+            onPress={onCreateCustom}
+          >
+            <IconSymbol name="add" size={20} color={theme.colors.onPrimary} />
+          </TouchableOpacity>
+        </View>
         
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Category Options */}
           {categories.map((category) => (
-            <TouchableOpacity
+            <View
               key={category.id}
               style={[
                 styles.categoryItem,
                 {
-                  backgroundColor: theme.colors.surfaceVariant,
+                  backgroundColor: selectedCategory?.id === category.id 
+                    ? theme.colors.primaryContainer + '40' // More subtle with 40% opacity
+                    : theme.colors.surfaceVariant,
                 },
               ]}
-              onPress={() => handleCategorySelect(category)}
             >
-              <View style={styles.categoryContent}>
+              <TouchableOpacity
+                style={styles.categoryContent}
+                onPress={() => handleCategorySelect(category)}
+              >
                 <View style={[
                   styles.categoryIcon,
                   {
@@ -78,65 +146,67 @@ export default function CategoryPickerModal({
                 ]}>
                   {category.name}
                 </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-          
-          {/* Create Custom Category Option */}
-          <TouchableOpacity
-            style={[
-              styles.categoryItem,
-              {
-                backgroundColor: theme.colors.primary,
-              },
-            ]}
-            onPress={onCreateCustom}
-          >
-            <View style={styles.categoryContent}>
-              <View style={[
-                styles.categoryIcon,
-                {
-                  backgroundColor: theme.colors.onPrimary,
-                },
-              ]}>
+              </TouchableOpacity>
+              
+              {/* Edit Button */}
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditCategory(category)}
+              >
                 <IconSymbol 
-                  name="add" 
-                  size={20} 
-                  color={theme.colors.primary} 
+                  name="edit" 
+                  size={18} 
+                  color={theme.colors.onSurfaceVariant} 
                 />
-              </View>
-              <Text style={[
-                styles.categoryName,
-                {
-                  color: theme.colors.onPrimary,
-                },
-              ]}>
-                Create Custom Category
-              </Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          ))}
         </ScrollView>
 
         {/* Action Buttons */}
-        <View style={styles.actionButtonsContainer}>
-          <Button
-            mode="text"
-            onPress={onClose}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="close" size={size} color={color} />
-            )}
-            textColor={theme.colors.onSurface}
-            style={styles.actionButton}
+        <View style={styles.footer}>
+          <UniversalButton
+            variant="outline"
+            size="large"
+            onPress={handleCancel}
+            style={styles.cancelButton}
           >
-            Close
-          </Button>
+            Cancel
+          </UniversalButton>
+          <UniversalButton
+            variant="primary"
+            size="large"
+            onPress={handleConfirmSelection}
+            disabled={!selectedCategory}
+            style={styles.confirmButton}
+          >
+            Select
+          </UniversalButton>
         </View>
       </ThemedView>
+
+      {/* Edit Category Modal */}
+      <CreateCategoryModal
+        visible={editModalVisible}
+        onClose={handleCloseEditModal}
+        onCreateCategory={async (categoryData) => {
+          if (editingCategory && onUpdateCategory) {
+            await onUpdateCategory(editingCategory.id, categoryData);
+            // Notify parent component to refresh categories
+            if (onCategoriesUpdated) {
+              onCategoriesUpdated();
+            }
+          }
+          setEditModalVisible(false);
+          setEditingCategory(null);
+        }}
+        editingCategory={editingCategory}
+      />
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   modal: {
     margin: 0,
     justifyContent: 'flex-end',
@@ -148,16 +218,33 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     paddingBottom: 24,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 24,
+  },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginLeft: 20,
-    marginTop: 24,
-    marginBottom: 24,
+    flex: 1,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 16,
   },
   scrollView: {
     maxHeight: 400,
     paddingHorizontal: 16,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   categoryItem: {
     flexDirection: 'row',
@@ -165,8 +252,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 8,
+    marginBottom: 12,
     borderRadius: 12,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   categoryContent: {
     flexDirection: 'row',
@@ -186,17 +278,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
-  actionButtonsContainer: {
+  footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-evenly',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 24,
+    paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: 'transparent',
-    marginTop: 24,
+    borderTopColor: theme.colors.outline,
+    backgroundColor: theme.colors.elevation.level1,
+    gap: 16,
   },
-  actionButton: {
+  cancelButton: {
     flex: 1,
+    minHeight: 48,
+  },
+  confirmButton: {
+    flex: 1,
+    minHeight: 48,
   },
 });

@@ -1,5 +1,5 @@
 import { DEFAULT_CATEGORIES } from '@/constants/categories';
-import { createCategory, listenToUserCategories } from '@/lib/api/categories';
+import { createCategory, listenToUserCategories, updateCategory } from '@/lib/api/categories';
 import { Category } from '@/types/category';
 import { useEffect, useState } from 'react';
 
@@ -49,9 +49,18 @@ export const useCategories = (userId: string) => {
     await createCategory(userId, category);
   };
 
+  const updateCustomCategory = async (categoryId: string, category: Omit<Category, 'id'>) => {
+    if (!userId) {
+      throw new Error('User ID is required to update custom categories');
+    }
+    
+    await updateCategory(userId, categoryId, category);
+  };
+
   return {
     categories,
     loading,
     createCategory: createCustomCategory,
+    updateCategory: updateCustomCategory,
   };
 };

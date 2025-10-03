@@ -60,10 +60,14 @@ const getStyles = (theme: MD3Theme) =>
     },
     actionButtonsContainer: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingTop: 16,
+      justifyContent: 'space-evenly',
+      paddingHorizontal: 24,
+      paddingVertical: 24,
+      paddingBottom: 40,
       borderTopWidth: 1,
       borderTopColor: theme.colors.outline,
+      backgroundColor: theme.colors.elevation.level1,
+      gap: 16,
     },
     error: {
       marginBottom: 24,
@@ -232,7 +236,7 @@ const convertCashewToTransaction = (cashewTx: CashewTransaction): TransactionInp
 export const CashewImportModal: React.FC<ImportModalProps> = ({ visible, onDismiss }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
-  const { user } = useAuth();
+  const { user, getEncryptionKey, getGroupEncryptionKey } = useAuth();
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerResult | null>(
     null
   );
@@ -286,7 +290,11 @@ export const CashewImportModal: React.FC<ImportModalProps> = ({ visible, onDismi
           const transaction = convertCashewToTransaction(cashewTx);
           transaction.createdBy = user.uid;
 
-          await addTransaction(user.uid, user.linkedGroupId ?? null, transaction);
+          // Get encryption keys
+          const personalKey = await getEncryptionKey();
+          const groupKey = user.linkedGroupId ? await getGroupEncryptionKey() : null;
+
+          await addTransaction(user.uid, user.linkedGroupId ?? null, transaction, personalKey, groupKey);
           successCount++;
         } catch (err) {
           errorCount++;

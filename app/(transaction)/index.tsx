@@ -153,7 +153,21 @@ export default function Transaction() {
 
   
   // Get categories from hook
-  const { categories, createCategory } = useCategories(user?.uid || '');
+  const { categories, createCategory, updateCategory } = useCategories(user?.uid || '');
+  
+  // Update selected category if it was updated
+  React.useEffect(() => {
+    if (selectedCategory && categories.length > 0) {
+      const updatedCategory = categories.find(cat => cat.id === selectedCategory.id);
+      if (updatedCategory && (
+        updatedCategory.name !== selectedCategory.name ||
+        updatedCategory.icon !== selectedCategory.icon ||
+        updatedCategory.color !== selectedCategory.color
+      )) {
+        setSelectedCategory(updatedCategory);
+      }
+    }
+  }, [categories, selectedCategory]);
   
   // Auto-popup category selection when amount is entered
   React.useEffect(() => {
@@ -437,6 +451,12 @@ export default function Transaction() {
             setIsCreateCategoryVisible(true);
           }, 500);
         }}
+        onUpdateCategory={updateCategory}
+        onCategoriesUpdated={() => {
+          // Categories will automatically refresh due to the real-time listener
+          console.log('Categories updated - listener will handle refresh');
+        }}
+        currentSelectedCategory={selectedCategory}
       />
       <CreateCategoryModal
         visible={isCreateCategoryVisible}
