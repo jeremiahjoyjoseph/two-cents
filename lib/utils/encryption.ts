@@ -1,4 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
+import { firestore } from '@/config/firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deriveKEK, encryptWithAES, decryptWithAES, generateSalt } from './aes';
 
 /**
  * Encryption utilities for secure key management
@@ -62,5 +65,138 @@ export const hasPersonalKey = async (uid: string): Promise<boolean> => {
   } catch (error) {
     console.error('Failed to check personal encryption key:', error);
     return false;
+  }
+};
+
+/**
+ * Cloud storage functions for encrypted personal keys
+ */
+
+export interface EncryptedKeyData {
+  encryptedPersonalKey: string;
+  keySalt: string;
+}
+
+/**
+ * Store encrypted personal key in Firestore
+ * @param uid - User ID
+ * @param encryptedKey - AES-encrypted personal key
+ * @param salt - Salt used for PBKDF2 key derivation
+ */
+export const storeEncryptedPersonalKeyInCloud = async (
+  uid: string,
+  encryptedKey: string,
+  salt: string
+): Promise<void> => {
+  try {
+    const userRef = doc(firestore, 'users', uid);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      // Update existing user document
+      await updateDoc(userRef, {
+        encryptedPersonalKey: encryptedKey,
+        keySalt: salt,
+      });
+    } else {
+      // This shouldn't happen, but handle it gracefully
+      console.warn('User document does not exist, creating with encrypted key');
+      await setDoc(userRef, {
+        uid,
+        encryptedPersonalKey: encryptedKey,
+        keySalt: salt,
+      });
+    }
+    console.log('✅ Encrypted personal key stored in cloud');
+  } catch (error) {
+    console.error('Failed to store encrypted personal key in cloud:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get encrypted personal key from Firestore
+ * @param uid - User ID
+ * @returns Encrypted key data or null if not found
+ */
+export const getEncryptedPersonalKeyFromCloud = async (
+  uid: string
+): Promise<EncryptedKeyData | null> => {
+  try {
+    const userRef = doc(firestore, 'users', uid);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      console.error('User document not found');
+      return null;
+    }
+
+    const data = userDoc.data();
+    if (!data.encryptedPersonalKey || !data.keySalt) {
+      console.error('Encrypted personal key or salt not found in user document');
+      return null;
+    }
+
+    return {
+      encryptedPersonalKey: data.encryptedPersonalKey,
+      keySalt: data.keySalt,
+    };
+  } catch (error) {
+    console.error('Failed to get encrypted personal key from cloud:', error);
+    return null;
+  }
+};
+
+/**
+ * Encrypt personal key with password-derived KEK
+ * @param personalKey - The raw personal encryption key (hex string)
+ * @param password - User's password
+ * @returns Object with encrypted key and salt
+ */
+export const encryptPersonalKey = async (
+  personalKey: string,
+  password: string
+): Promise<EncryptedKeyData> => {
+  try {
+    // Generate salt for PBKDF2
+    const salt = await generateSalt();
+
+    // Derive KEK from password
+    const kek = await deriveKEK(password, salt);
+
+    // Encrypt personal key with KEK
+    const encryptedKey = await encryptWithAES(personalKey, kek);
+
+    return {
+      encryptedPersonalKey: encryptedKey,
+      keySalt: salt,
+    };
+  } catch (error) {
+    console.error('Failed to encrypt personal key:', error);
+    throw new Error('Failed to encrypt personal key');
+  }
+};
+
+/**
+ * Decrypt personal key using password-derived KEK
+ * @param encryptedData - Encrypted key data from cloud
+ * @param password - User's password
+ * @returns Decrypted personal key (hex string)
+ */
+export const decryptPersonalKey = async (
+  encryptedData: EncryptedKeyData,
+  password: string
+): Promise<string> => {
+  try {
+    // Derive KEK from password using stored salt
+    const kek = await deriveKEK(password, encryptedData.keySalt);
+
+    // Decrypt personal key with KEK
+    const personalKey = await decryptWithAES(encryptedData.encryptedPersonalKey, kek);
+
+    return personalKey;
+  } catch (error) {
+    console.error('Failed to decrypt personal key:', error);
+    throw new Error('Failed to decrypt personal key - incorrect password or corrupted data');
   }
 };

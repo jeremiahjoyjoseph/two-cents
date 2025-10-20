@@ -1,7 +1,16 @@
 import { auth, firestore } from '@/config/firebase';
-import { deletePersonalKey, getPersonalKey, hasPersonalKey, setPersonalKey } from '@/lib/utils';
+import { 
+  deletePersonalKey, 
+  getPersonalKey, 
+  hasPersonalKey, 
+  setPersonalKey,
+  encryptPersonalKey,
+  decryptPersonalKey,
+  storeEncryptedPersonalKeyInCloud,
+  getEncryptedPersonalKeyFromCloud
+} from '@/lib/utils';
+import { generateEncryptionKey } from '@/lib/utils/aes';
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
-import * as Crypto from 'expo-crypto';
 import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -11,7 +20,27 @@ export const loginUser = async ({ email, password }: UserLoginData) => {
     if (!email || !password) {
       throw new Error('Email and password are required');
     }
-    await signInWithEmailAndPassword(auth, email, password);
+    
+    // Authenticate with Firebase
+    const response = await signInWithEmailAndPassword(auth, email, password);
+    const uid = response.user.uid;
+    
+    // Fetch encrypted personal key from Firestore
+    console.log('🔑 Fetching encrypted personal key from cloud...');
+    const encryptedKeyData = await getEncryptedPersonalKeyFromCloud(uid);
+    
+    if (!encryptedKeyData) {
+      throw new Error('Encryption key not found. Please contact support.');
+    }
+    
+    // Decrypt personal key using password
+    console.log('🔓 Decrypting personal key...');
+    const personalKey = await decryptPersonalKey(encryptedKeyData, password);
+    
+    // Store decrypted key in local SecureStore for fast access
+    await setPersonalKey(uid, personalKey);
+    console.log('✅ Personal key decrypted and cached locally');
+    
   } catch (error) {
     if (error instanceof FirebaseError) {
       console.error('Login error:', error.code, error.message);
@@ -34,7 +63,7 @@ export const loginUser = async ({ email, password }: UserLoginData) => {
           throw new Error('Login failed: ' + error.message);
       }
     }
-    throw new Error('Login failed');
+    throw error;
   }
 };
 
@@ -45,27 +74,36 @@ export const registerUser = async ({
 }: UserRegistrationData): Promise<UserResponse> => {
   try {
     const response = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = response.user.uid;
 
-    // Generate a 32-byte encryption key using expo-crypto
-    const randomBytes = await Crypto.getRandomBytesAsync(32);
-    const encryptionKey = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join(
-      ''
-    );
+    // Generate a 32-byte personal encryption key using AES utility
+    console.log('🔑 Generating personal encryption key...');
+    const personalKey = await generateEncryptionKey();
+    console.log('Key length:', personalKey.length, 'characters (64 hex = 32 bytes)');
 
-    // Log the encryption key for testing
-    console.log('Generated encryption key:', encryptionKey);
-    console.log('Key length:', encryptionKey.length, 'characters');
+    // Encrypt personal key with password-derived KEK
+    console.log('🔐 Encrypting personal key with password...');
+    const encryptedKeyData = await encryptPersonalKey(personalKey, password);
 
-    // Store encryption key securely on device
-    await setPersonalKey(response.user.uid, encryptionKey);
+    // Store encrypted key in Firestore (cloud)
+    console.log('☁️ Storing encrypted key in cloud...');
+    await storeEncryptedPersonalKeyInCloud(uid, encryptedKeyData.encryptedPersonalKey, encryptedKeyData.keySalt);
+
+    // Also store decrypted key locally in SecureStore for fast access
+    await setPersonalKey(uid, personalKey);
+    console.log('✅ Personal key stored locally and in cloud');
 
     const userData = {
       name,
       email,
-      uid: response.user.uid,
+      uid,
       createdAt: new Date().toISOString(),
     };
-    await setDoc(doc(firestore, 'users', response.user.uid), userData);
+    
+    // Note: User document is created by storeEncryptedPersonalKeyInCloud or we update it here
+    const userRef = doc(firestore, 'users', uid);
+    await setDoc(userRef, userData, { merge: true });
+    
     return { success: true, user: userData, status: 200 };
   } catch (error) {
     if (error instanceof FirebaseError) {
@@ -87,7 +125,7 @@ export const registerUser = async ({
           throw new Error('Registration failed: ' + error.message);
       }
     }
-    throw new Error('Registration failed');
+    throw error;
   }
 };
 

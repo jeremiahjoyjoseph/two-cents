@@ -4,6 +4,8 @@ export type User = {
   name?: string;
   linkedGroupId?: string | null;
   createdAt?: string; // ISO or Timestamp
+  encryptedPersonalKey?: string; // AES-encrypted personal key (stored in cloud)
+  keySalt?: string; // Salt for PBKDF2 key derivation
 };
 
 export type UserRegistrationData = {

@@ -1,7 +1,7 @@
 import { firestore } from '@/config/firebase';
 import { deleteAllTransactions } from '@/lib/api/transactions';
 import { getPersonalKey } from '@/lib/utils';
-import * as Crypto from 'expo-crypto';
+import { encryptWithAES, decryptWithAES, generateEncryptionKey } from '@/lib/utils/aes';
 import {
   addDoc,
   collection,
@@ -20,39 +20,17 @@ const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const MAX_ATTEMPTS = 5; // Prevent infinite loops
 
 /**
- * Encrypt a group key using a user's personal key
+ * Encrypt a group key using a user's personal key with AES-256-CBC
  */
 const encryptGroupKey = async (groupKey: string, personalKey: string): Promise<string> => {
-  const groupKeyBytes = new Uint8Array(groupKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
-  const personalKeyBytes = new Uint8Array(
-    personalKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
-  );
-
-  const encrypted = new Uint8Array(groupKeyBytes.length);
-  for (let i = 0; i < groupKeyBytes.length; i++) {
-    encrypted[i] = groupKeyBytes[i] ^ personalKeyBytes[i % personalKeyBytes.length];
-  }
-
-  return Array.from(encrypted, byte => byte.toString(16).padStart(2, '0')).join('');
+  return await encryptWithAES(groupKey, personalKey);
 };
 
 /**
- * Decrypt a group key using a user's personal key
+ * Decrypt a group key using a user's personal key with AES-256-CBC
  */
 const decryptGroupKey = async (encryptedGroupKey: string, personalKey: string): Promise<string> => {
-  const encryptedBytes = new Uint8Array(
-    encryptedGroupKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
-  );
-  const personalKeyBytes = new Uint8Array(
-    personalKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
-  );
-
-  const decrypted = new Uint8Array(encryptedBytes.length);
-  for (let i = 0; i < encryptedBytes.length; i++) {
-    decrypted[i] = encryptedBytes[i] ^ personalKeyBytes[i % personalKeyBytes.length];
-  }
-
-  return Array.from(decrypted, byte => byte.toString(16).padStart(2, '0')).join('');
+  return await decryptWithAES(encryptedGroupKey, personalKey);
 };
 
 /**
@@ -195,10 +173,9 @@ export const generatePairCode = async (uid: string) => {
     throw new Error('Failed to generate unique code after multiple attempts');
   }
 
-  // Generate group encryption key
+  // Generate group encryption key using AES utility
   console.log('Creating group encryption key...');
-  const randomBytes = await Crypto.getRandomBytesAsync(32);
-  const groupKey = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  const groupKey = await generateEncryptionKey();
 
   // Get user's personal key to encrypt the group key
   const personalKey = await getPersonalKey(uid);
@@ -206,7 +183,7 @@ export const generatePairCode = async (uid: string) => {
     throw new Error('Personal encryption key not found');
   }
 
-  // Encrypt group key with user's personal key
+  // Encrypt group key with user's personal key using AES
   const encryptedGroupKey = await encryptGroupKey(groupKey, personalKey);
 
   // Create group document
