@@ -166,9 +166,11 @@ export default function CategoryPickerModal({
         {/* Action Buttons */}
         <View style={styles.footer}>
           <UniversalButton
-            variant="outline"
+            variant="ghost"
             size="large"
             onPress={handleCancel}
+            icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+            iconPosition="left"
             style={styles.cancelButton}
           >
             Cancel
@@ -178,6 +180,8 @@ export default function CategoryPickerModal({
             size="large"
             onPress={handleConfirmSelection}
             disabled={!selectedCategory}
+            icon={<IconSymbol name="check" size={20} color={theme.colors.onPrimary} />}
+            iconPosition="left"
             style={styles.confirmButton}
           >
             Select
@@ -190,8 +194,12 @@ export default function CategoryPickerModal({
         visible={editModalVisible}
         onClose={handleCloseEditModal}
         onCreateCategory={async (categoryData) => {
-          if (editingCategory && onUpdateCategory) {
-            await onUpdateCategory(editingCategory.id, categoryData);
+          // This should not be called when editing, but keeping for safety
+          console.warn('CreateCategory called in edit mode');
+        }}
+        onUpdateCategory={async (categoryId, categoryData) => {
+          if (onUpdateCategory) {
+            await onUpdateCategory(categoryId, categoryData);
             // Notify parent component to refresh categories
             if (onCategoriesUpdated) {
               onCategoriesUpdated();

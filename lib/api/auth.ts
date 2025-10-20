@@ -15,6 +15,24 @@ export const loginUser = async ({ email, password }: UserLoginData) => {
   } catch (error) {
     if (error instanceof FirebaseError) {
       console.error('Login error:', error.code, error.message);
+      
+      // Handle specific Firebase authentication errors
+      switch (error.code) {
+        case 'auth/user-not-found':
+          throw new Error('No account found with this email address');
+        case 'auth/wrong-password':
+          throw new Error('Incorrect password');
+        case 'auth/invalid-email':
+          throw new Error('Invalid email address');
+        case 'auth/user-disabled':
+          throw new Error('This account has been disabled');
+        case 'auth/too-many-requests':
+          throw new Error('Too many failed attempts. Please try again later');
+        case 'auth/network-request-failed':
+          throw new Error('Network error. Please check your connection');
+        default:
+          throw new Error('Login failed: ' + error.message);
+      }
     }
     throw new Error('Login failed');
   }
@@ -52,6 +70,22 @@ export const registerUser = async ({
   } catch (error) {
     if (error instanceof FirebaseError) {
       console.error('Register error:', error.code, error.message);
+      
+      // Handle specific Firebase authentication errors
+      switch (error.code) {
+        case 'auth/weak-password':
+          throw new Error('Password should be at least 6 characters');
+        case 'auth/email-already-in-use':
+          throw new Error('An account with this email already exists');
+        case 'auth/invalid-email':
+          throw new Error('Invalid email address');
+        case 'auth/operation-not-allowed':
+          throw new Error('Email/password accounts are not enabled');
+        case 'auth/too-many-requests':
+          throw new Error('Too many requests. Please try again later');
+        default:
+          throw new Error('Registration failed: ' + error.message);
+      }
     }
     throw new Error('Registration failed');
   }

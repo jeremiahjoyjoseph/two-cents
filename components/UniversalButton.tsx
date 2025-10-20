@@ -1,17 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import React, { useRef } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Platform,
-    Pressable,
-    TextStyle,
-    ViewStyle
+  ActivityIndicator,
+  Animated,
+  Platform,
+  Pressable,
+  TextStyle,
+  ViewStyle
 } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { ThemedText } from './ThemedText';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'auth';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'auth' | 'surface';
 export type ButtonSize = 'small' | 'medium' | 'large' | 'xl';
 
 export interface UniversalButtonProps {
@@ -45,42 +45,27 @@ export function UniversalButton({
 }: UniversalButtonProps) {
   const theme = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     if (disabled || loading) return;
     
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0.96,
-        useNativeDriver: true,
-        tension: 300,
-        friction: 10,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
   };
 
   const handlePressOut = () => {
     if (disabled || loading) return;
     
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 300,
-        friction: 10,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
   };
 
   const handlePress = () => {
@@ -275,6 +260,12 @@ export function UniversalButton({
           shadowRadius: 8,
           elevation: 4,
         };
+      case 'surface':
+        return {
+          backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.outline,
+        };
       default:
         return {
           backgroundColor: theme.colors.primary,
@@ -309,6 +300,10 @@ export function UniversalButton({
         return {
           color: '#000000',
           fontWeight: '700',
+        };
+      case 'surface':
+        return {
+          color: theme.colors.onSurface,
         };
       default:
         return {
@@ -354,7 +349,6 @@ export function UniversalButton({
       style={[
         {
           transform: [{ scale: scaleAnim }],
-          opacity: opacityAnim,
         },
       ]}
     >
@@ -371,5 +365,3 @@ export function UniversalButton({
   );
 }
 
-// Export size and variant types for external use
-export { ButtonSize, ButtonVariant };

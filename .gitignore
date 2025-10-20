@@ -36,4 +36,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Android SDK (should be installed globally, not in project)
+build-tools/
+platforms/
+platform-tools/
+licenses/
+
 app-example

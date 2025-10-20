@@ -1,9 +1,10 @@
 import { ThemedView } from '@/components/ThemedView';
+import { UniversalButton } from '@/components/UniversalButton';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, useTheme } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
 
 interface MonthRangeModalProps {
   isVisible: boolean;
@@ -16,17 +17,17 @@ interface MonthRangeModalProps {
 
 type MonthLayout = { x: number; width: number };
 
-function SectionHeader({ children, style }: { children: React.ReactNode; style?: any }) {
+function SectionHeader({ children, style, themeStyles }: { children: React.ReactNode; style?: any; themeStyles: any }) {
   const theme = useTheme();
   return (
-    <Text style={[styles.sectionHeader, { color: theme.colors.onSurface }, style]}>{children}</Text>
+    <Text style={[themeStyles.sectionHeader, { color: theme.colors.onSurface }, style]}>{children}</Text>
   );
 }
 
-function Separator() {
+function Separator({ themeStyles }: { themeStyles: any }) {
   const theme = useTheme();
   return (
-    <View style={[styles.separator, { backgroundColor: theme.colors.outlineVariant ?? '#eee' }]} />
+    <View style={[themeStyles.separator, { backgroundColor: theme.colors.outlineVariant ?? '#eee' }]} />
   );
 }
 
@@ -39,6 +40,7 @@ function MonthRangeModal({
   setAllTimeSelected,
 }: MonthRangeModalProps) {
   const theme = useTheme();
+  const styles = getStyles(theme);
   const months = useMemo(getMonthArray, []);
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -105,7 +107,7 @@ function MonthRangeModal({
       useNativeDriver
     >
       <ThemedView style={[styles.container, { backgroundColor: theme.colors.elevation.level1 }]}>
-        <SectionHeader>Choose month</SectionHeader>
+        <SectionHeader themeStyles={styles}>Choose month</SectionHeader>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -158,8 +160,8 @@ function MonthRangeModal({
             );
           })}
         </ScrollView>
-        <Separator />
-        <SectionHeader style={styles.sectionHeaderSmall}>or all time</SectionHeader>
+        <Separator themeStyles={styles} />
+        <SectionHeader style={styles.sectionHeaderSmall} themeStyles={styles}>or all time</SectionHeader>
         <View style={styles.allTimeButtonWrapper}>
           <TouchableOpacity
             style={[
@@ -190,30 +192,28 @@ function MonthRangeModal({
           </TouchableOpacity>
         </View>
         {/* Action Buttons */}
-        <View style={styles.actionButtonsContainer}>
-          <Button
-            mode="text"
+        <ThemedView style={styles.actionButtonsContainer}>
+          <UniversalButton
+            variant="ghost"
+            size="large"
             onPress={onClose}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="close" size={size} color={color} />
-            )}
-            textColor={theme.colors.onSurface}
-            style={styles.actionButton}
+            icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+            iconPosition="left"
+            style={styles.cancelButton}
           >
             Close
-          </Button>
-          <Button
-            mode="contained"
+          </UniversalButton>
+          <UniversalButton
+            variant="primary"
+            size="large"
             onPress={handleSet}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="check" size={size} color={color} />
-            )}
-            buttonColor={theme.colors.primary}
-            style={[styles.setButton, styles.actionButton]}
+            icon={<IconSymbol name="check" size={20} color={theme.colors.onPrimary} />}
+            iconPosition="left"
+            style={styles.setButton}
           >
             Set
-          </Button>
-        </View>
+          </UniversalButton>
+        </ThemedView>
       </ThemedView>
     </Modal>
   );
@@ -231,7 +231,7 @@ function getMonthArray() {
   return months;
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   modal: {
     margin: 0,
     justifyContent: 'flex-end',
@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
   allTimeButtonWrapper: {
     alignItems: 'flex-start',
     marginLeft: 12,
+    marginBottom: 24,
   },
   allTimeButton: {
     borderRadius: 24,
@@ -307,15 +308,17 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#f5f5f5',
+    borderTopColor: theme.colors.outline,
+    backgroundColor: theme.colors.elevation.level1,
     gap: 16,
   },
-  setButton: {
-    paddingHorizontal: 24,
-  },
-  actionButton: {
+  cancelButton: {
     flex: 1,
+    minHeight: 48,
+  },
+  setButton: {
+    flex: 1,
+    minHeight: 48,
   },
 });
 

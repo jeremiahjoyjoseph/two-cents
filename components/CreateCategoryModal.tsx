@@ -117,6 +117,11 @@ export const CreateCategoryModal = ({
       onClose();
     } catch (err) {
       console.error('Failed to save category:', err);
+      console.error('Error details:', {
+        editingCategory: editingCategory?.id,
+        categoryData,
+        error: err
+      });
       Alert.alert('Error', 'Failed to save category. Please try again.');
     } finally {
       setIsCreating(false);
@@ -268,9 +273,11 @@ export const CreateCategoryModal = ({
 
         <View style={styles.footer}>
           <UniversalButton
-            variant="outline"
+            variant="ghost"
             size="large"
             onPress={handleClose}
+            icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+            iconPosition="left"
             style={styles.cancelButton}
           >
             Cancel
@@ -281,6 +288,8 @@ export const CreateCategoryModal = ({
             onPress={handleCreate}
             disabled={!name.trim() || isCreating}
             loading={isCreating}
+            icon={<IconSymbol name="check" size={20} color={theme.colors.onPrimary} />}
+            iconPosition="left"
             style={styles.createButton}
           >
             {isCreating 
@@ -437,8 +446,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     paddingHorizontal: 24,
-    paddingVertical: 32,
-    paddingBottom: 60,
+    paddingVertical: 24,
+    paddingBottom: 40,
     borderTopWidth: 1,
     borderTopColor: theme.colors.outline,
     backgroundColor: theme.colors.elevation.level1,

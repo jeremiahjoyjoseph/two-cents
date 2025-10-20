@@ -54,7 +54,22 @@ export const useCategories = (userId: string) => {
       throw new Error('User ID is required to update custom categories');
     }
     
-    await updateCategory(userId, categoryId, category);
+    // Check if this is a default category (not stored in Firestore)
+    const isDefaultCategory = DEFAULT_CATEGORIES.some(defaultCat => defaultCat.id === categoryId);
+    
+    console.log('Updating category:', { categoryId, category, isDefaultCategory });
+    
+    if (isDefaultCategory) {
+      // For default categories, create a new custom category instead of updating
+      // This allows users to customize default categories
+      // The new category will have the same name but different ID
+      console.log('Creating new custom category for default category:', categoryId);
+      await createCategory(userId, category);
+    } else {
+      // For custom categories, update the existing one
+      console.log('Updating existing custom category:', categoryId);
+      await updateCategory(userId, categoryId, category);
+    }
   };
 
   return {

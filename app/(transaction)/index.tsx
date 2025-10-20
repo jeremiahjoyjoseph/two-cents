@@ -158,7 +158,18 @@ export default function Transaction() {
   // Update selected category if it was updated
   React.useEffect(() => {
     if (selectedCategory && categories.length > 0) {
-      const updatedCategory = categories.find(cat => cat.id === selectedCategory.id);
+      // First, try to find the category by ID
+      let updatedCategory = categories.find(cat => cat.id === selectedCategory.id);
+      
+      // If not found by ID, it might be a default category that was edited
+      // Look for a custom category with the same name
+      if (!updatedCategory && selectedCategory.name) {
+        updatedCategory = categories.find(cat => 
+          cat.name === selectedCategory.name && 
+          cat.isCustom === true
+        );
+      }
+      
       if (updatedCategory && (
         updatedCategory.name !== selectedCategory.name ||
         updatedCategory.icon !== selectedCategory.icon ||
@@ -326,7 +337,7 @@ export default function Transaction() {
 
             <ThemedView style={styles.typeRow}>
               <UniversalButton
-                variant="outline"
+                variant="surface"
                 size="medium"
                 onPress={() => setTransactionTypeModalVisible(true)}
                 style={{
@@ -455,6 +466,8 @@ export default function Transaction() {
         onCategoriesUpdated={() => {
           // Categories will automatically refresh due to the real-time listener
           console.log('Categories updated - listener will handle refresh');
+          console.log('Current categories:', categories);
+          console.log('Selected category:', selectedCategory);
         }}
         currentSelectedCategory={selectedCategory}
       />

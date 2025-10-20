@@ -1,9 +1,10 @@
 import { ThemedView } from '@/components/ThemedView';
+import { UniversalButton } from '@/components/UniversalButton';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, useTheme } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
 
 interface MultiSelectCategoryModalProps {
   isVisible: boolean;
@@ -21,6 +22,7 @@ export default function MultiSelectCategoryModal({
   categories,
 }: MultiSelectCategoryModalProps) {
   const theme = useTheme();
+  const styles = getStyles(theme);
   const [localSelectedIds, setLocalSelectedIds] = useState<string[]>(selectedCategoryIds);
 
   // Sync local state with parent when modal opens
@@ -173,35 +175,33 @@ export default function MultiSelectCategoryModal({
 
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
-          <Button
-            mode="text"
+          <UniversalButton
+            variant="ghost"
+            size="large"
             onPress={onClose}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="close" size={size} color={color} />
-            )}
-            textColor={theme.colors.onSurface}
+            icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+            iconPosition="left"
             style={styles.cancelButton}
           >
             Cancel
-          </Button>
-          <Button
-            mode="contained"
+          </UniversalButton>
+          <UniversalButton
+            variant="primary"
+            size="large"
             onPress={handleApply}
-            icon={({ size, color }: { size: number; color: string }) => (
-              <IconSymbol name="check" size={size} color={color} />
-            )}
-            buttonColor={theme.colors.primary}
+            icon={<IconSymbol name="check" size={20} color={theme.colors.onPrimary} />}
+            iconPosition="left"
             style={styles.applyButton}
           >
             Apply
-          </Button>
+          </UniversalButton>
         </View>
       </ThemedView>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   modal: {
     margin: 0,
     justifyContent: 'flex-end',
@@ -271,16 +271,16 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#f5f5f5',
+    borderTopColor: theme.colors.outline,
+    backgroundColor: theme.colors.elevation.level1,
     gap: 16,
   },
   cancelButton: {
     flex: 1,
-    marginRight: 12,
+    minHeight: 48,
   },
   applyButton: {
     flex: 1,
-    marginLeft: 12,
+    minHeight: 48,
   },
 });

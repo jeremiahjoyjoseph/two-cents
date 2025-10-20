@@ -48,7 +48,7 @@ const getStyles = (theme: any) =>
       backgroundColor: 'transparent',
     },
     optionSelected: {
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.primaryContainer,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
@@ -61,7 +61,7 @@ const getStyles = (theme: any) =>
     },
     selectedText: {
       marginLeft: 'auto',
-      color: theme.colors.primary,
+      color: theme.colors.onPrimaryContainer,
       fontWeight: 'bold',
       fontSize: 16,
     },
@@ -139,7 +139,13 @@ export default function TransactionTypeModal({
               onPress={() => onSelectType(option.type)}
               activeOpacity={0.85}
             >
-              <ThemedText type="defaultSemiBold" style={{ fontSize: 18 }}>
+              <ThemedText 
+                type="defaultSemiBold" 
+                style={{ 
+                  fontSize: 18,
+                  color: selectedType === option.type ? theme.colors.onPrimaryContainer : theme.colors.onSurface
+                }}
+              >
                 {option.label}
               </ThemedText>
               {selectedType === option.type && (
