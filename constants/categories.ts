@@ -1,15 +1,5 @@
-import { Category } from '@/types/category';
-
-export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'rent', name: 'Rent', icon: 'home', color: '#F87171' },
-  { id: 'loan', name: 'Loan payment', icon: 'account-balance', color: '#FACC15' },
-  { id: 'food', name: 'Food', icon: 'restaurant', color: '#34D399' },
-  { id: 'fuel', name: 'Fuel', icon: 'local-gas-station', color: '#60A5FA' },
-  { id: 'shopping', name: 'Shopping', icon: 'shopping-bag', color: '#A78BFA' },
-  { id: 'travel', name: 'Travel', icon: 'flight-takeoff', color: '#F472B6' },
-  { id: 'bills', name: 'Bills', icon: 'receipt-long', color: '#FBBF24' },
-  { id: 'groceries', name: 'Groceries', icon: 'local-grocery-store', color: '#10B981' },
-];
+// DEFAULT_CATEGORIES removed - categories are now initialized in database during user registration
+// See lib/api/categories.ts -> initializeDefaultCategories()
 
 // To extend icons/colors, update CATEGORY_ICON_OPTIONS and CATEGORY_COLOR_OPTIONS.
 export const CATEGORY_ICON_OPTIONS = [

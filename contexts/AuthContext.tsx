@@ -1,9 +1,6 @@
 import { auth, firestore } from '@/config/firebase';
 import { loginUser, registerUser, sendPasswordReset, updateUserData } from '@/lib/api/auth';
-import {
-  getGroupEncryptionKey as getGroupKeyFromAPI,
-  unlinkPartnerAndTransferTransactions,
-} from '@/lib/api/pair';
+import { getGroupEncryptionKey as getGroupKeyFromAPI } from '@/lib/api/pair';
 import { deletePersonalKey, getPersonalKey, hasPersonalKey, setPersonalKey } from '@/lib/utils';
 import { User, UserLoginData, UserRegistrationData, UserResponse } from '@/types/user';
 import * as Crypto from 'expo-crypto';
@@ -14,7 +11,7 @@ import {
   reauthenticateWithCredential,
   signOut,
 } from 'firebase/auth';
-import { deleteDoc, doc, getDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
@@ -22,8 +19,8 @@ interface AuthContextType {
   setUser: (user: User | null) => void;
   isAuthReady: boolean;
   encryptionKey: string | null;
-  login: (data: UserLoginData) => Promise<void>;
-  register: (data: UserRegistrationData) => Promise<UserResponse>;
+  login: (data: UserLoginData & { pin?: string }) => Promise<void>;
+  register: (data: UserRegistrationData & { pin: string }) => Promise<UserResponse>;
   forgotPassword: (email: string) => Promise<void>;
   updateUser: (uid: string) => Promise<void>;
   updateLinkedGroupId: (groupId: string | null) => Promise<void>;
@@ -33,6 +30,11 @@ interface AuthContextType {
   regenerateEncryptionKey: () => Promise<void>;
   groupEncryptionKey: string | null;
   getGroupEncryptionKey: () => Promise<string | null>;
+  // PIN verification
+  isPINRequired: boolean;
+  setIsPINRequired: (required: boolean) => void;
+  verifyPIN: (pin: string) => Promise<boolean>;
+  lastPINVerification: Date | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,10 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [groupEncryptionKey, setGroupEncryptionKey] = useState<string | null>(null);
+  const [isPINRequired, setIsPINRequired] = useState(false);
+  const [lastPINVerification, setLastPINVerification] = useState<Date | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Force logout when encryption key is missing
   const forceLogout = async () => {
-    console.log('🔒 Encryption key missing - forcing logout');
     try {
       await signOut(auth);
       setUser(null);
@@ -56,28 +60,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Load encryption key from secure store
-  const loadEncryptionKey = useCallback(async (uid: string): Promise<boolean> => {
+  const loadEncryptionKey = useCallback(async (uid: string, skipLogoutOnError = false, retryCount = 0): Promise<boolean> => {
     try {
       const keyExists = await hasPersonalKey(uid);
       if (!keyExists) {
-        console.log('❌ No encryption key found in secure store');
-        await forceLogout();
+        // Retry once after a short delay (in case SecureStore write is still in progress)
+        if (retryCount === 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return loadEncryptionKey(uid, skipLogoutOnError, 1);
+        }
+        
+        if (!skipLogoutOnError) {
+          await forceLogout();
+        }
         return false;
       }
 
       const key = await getPersonalKey(uid);
       if (!key) {
-        console.log('❌ Failed to retrieve encryption key');
-        await forceLogout();
+        if (!skipLogoutOnError) {
+          await forceLogout();
+        }
         return false;
       }
 
       setEncryptionKey(key);
-      console.log('✅ Encryption key loaded successfully');
       return true;
     } catch (error) {
       console.error('Error loading encryption key:', error);
-      await forceLogout();
+      if (!skipLogoutOnError) {
+        await forceLogout();
+      }
       return false;
     }
   }, []);
@@ -89,12 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!user?.uid) {
-      console.log('❌ No user UID available for encryption key');
       return null;
     }
 
     // Fallback: try to load from secure store
-    console.log('🔄 Encryption key not in context, loading from secure store...');
     const success = await loadEncryptionKey(user.uid);
     if (success) {
       // Return the key directly from secure store since state update is async
@@ -107,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Refresh encryption key from secure store
   const refreshEncryptionKey = async (): Promise<void> => {
     if (!user?.uid) {
-      console.log('❌ No user UID available for encryption key refresh');
       return;
     }
 
@@ -117,13 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Regenerate encryption key (used after pairing)
   const regenerateEncryptionKey = async (): Promise<void> => {
     if (!user?.uid) {
-      console.log('❌ No user UID available for encryption key regeneration');
       return;
     }
 
     try {
-      console.log('🔄 Regenerating encryption key for user:', user.uid);
-
       // Generate new 32-byte encryption key
       const randomBytes = await Crypto.getRandomBytesAsync(32);
       const newEncryptionKey = Array.from(randomBytes, byte =>
@@ -135,10 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Update context with new key
       setEncryptionKey(newEncryptionKey);
-
-      console.log('✅ Encryption key regenerated successfully');
     } catch (error) {
-      console.error('❌ Error regenerating encryption key:', error);
+      console.error('Error regenerating encryption key:', error);
       throw error;
     }
   };
@@ -146,17 +151,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load group encryption key
   const loadGroupEncryptionKey = async (uid: string, groupId: string): Promise<boolean> => {
     try {
-      console.log('🔑 Loading group encryption key...');
       const groupKey = await getGroupKeyFromAPI(uid, groupId);
       if (!groupKey) {
-        console.log('❌ No group encryption key found');
         return false;
       }
       setGroupEncryptionKey(groupKey);
-      console.log('✅ Group encryption key loaded successfully');
       return true;
     } catch (error) {
-      console.error('❌ Error loading group encryption key:', error);
+      console.error('Error loading group encryption key:', error);
       return false;
     }
   };
@@ -171,9 +173,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return groupEncryptionKey;
     }
 
-    console.log('🔄 Group encryption key not in context, loading from group...');
-    const success = await loadGroupEncryptionKey(user.uid, user.linkedGroupId);
-    return success ? groupEncryptionKey : null;
+    // Load key directly from API since state updates are async
+    const groupKey = await getGroupKeyFromAPI(user.uid, user.linkedGroupId);
+    if (groupKey) {
+      setGroupEncryptionKey(groupKey);
+    }
+    return groupKey;
   };
 
   useEffect(() => {
@@ -197,6 +202,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(userData);
 
           // Load encryption key - this is critical for app access
+          // Skip during registration to avoid race condition
+          if (isRegistering) {
+            return;
+          }
+          
+          // Retry logic built into loadEncryptionKey handles race conditions
           const keyLoaded = await loadEncryptionKey(firebaseUser.uid);
           if (!keyLoaded) {
             // Key loading failed, user will be logged out
@@ -215,22 +226,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         setEncryptionKey(null);
+        setLastPINVerification(null);
       }
       setIsAuthReady(true);
     });
     return () => unsubscribe();
-  }, [loadEncryptionKey]);
+  }, [loadEncryptionKey, isRegistering]);
 
-  const login = async (data: UserLoginData) => {
+  // Periodic PIN verification check (every 15 minutes)
+  useEffect(() => {
+    if (!user || !lastPINVerification) {
+      return;
+    }
+
+    const PIN_VERIFICATION_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const CHECK_INTERVAL = 60 * 1000; // Check every minute
+
+    const intervalId = setInterval(() => {
+      const timeSinceLastVerification = Date.now() - lastPINVerification.getTime();
+      
+      if (timeSinceLastVerification > PIN_VERIFICATION_INTERVAL) {
+        setIsPINRequired(true);
+      }
+    }, CHECK_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [user, lastPINVerification]);
+
+  const login = async (data: UserLoginData & { pin?: string }) => {
     await loginUser(data);
     // Note: Encryption key will be loaded automatically via onAuthStateChanged
+    // Update PIN verification timestamp on successful login
+    setLastPINVerification(new Date());
   };
 
-  const register = async (data: UserRegistrationData) => {
-    const result = await registerUser(data);
-    // Note: Encryption key is generated and stored during registration
-    // and will be loaded automatically via onAuthStateChanged
-    return result;
+  const register = async (data: UserRegistrationData & { pin: string }) => {
+    try {
+      setIsRegistering(true);
+      const result = await registerUser(data);
+      
+      // Explicitly set the encryption key in state
+      if (result.personalKey) {
+        setEncryptionKey(result.personalKey);
+      }
+      
+      // Set initial PIN verification timestamp
+      setLastPINVerification(new Date());
+      return result;
+    } finally {
+      // Clear registration flag after a delay to ensure onAuthStateChanged completes
+      setTimeout(() => setIsRegistering(false), 1000);
+    }
+  };
+
+  // Verify PIN by attempting to decrypt the encryption key
+  const verifyPIN = async (pin: string): Promise<boolean> => {
+    try {
+      if (!user?.uid) {
+        console.error('No user UID available for PIN verification');
+        return false;
+      }
+
+      // Import encryption utilities
+      const { getEncryptedPersonalKeyFromCloud, decryptPersonalKey } = await import('@/lib/utils');
+      
+      // Fetch encrypted key from cloud
+      const encryptedKeyData = await getEncryptedPersonalKeyFromCloud(user.uid);
+      if (!encryptedKeyData) {
+        console.error('Encrypted key not found');
+        return false;
+      }
+
+      // Try to decrypt with provided PIN
+      const decryptedKey = await decryptPersonalKey(encryptedKeyData, pin);
+      
+      // If decryption succeeds, update verification timestamp
+      if (decryptedKey) {
+        setLastPINVerification(new Date());
+        setIsPINRequired(false);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('PIN verification failed:', error);
+      return false;
+    }
   };
 
   const forgotPassword = async (email: string) => {
@@ -242,7 +323,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) throw new Error('No user logged in');
       const userData = await updateUserData(uid);
       setUser({ ...userData });
-      console.log('User data updated:', userData);
     } catch {
       throw new Error('Failed to update user');
     }
@@ -254,11 +334,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Load group encryption key if linking to a group
       if (groupId) {
-        console.log('🔑 Loading group encryption key after linking...');
         await loadGroupEncryptionKey(user.uid, groupId);
       } else {
         // Clear group encryption key if unlinking
-        console.log('🔑 Clearing group encryption key after unlinking...');
         setGroupEncryptionKey(null);
       }
     }
@@ -270,38 +348,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = auth.currentUser;
       if (!currentUser) throw new Error('No authenticated user');
 
-      // If user is in a group, unlink first
+      // Step 1: Delete all user's personal transactions
+      const { deleteAllTransactions } = await import('@/lib/api/transactions');
+      await deleteAllTransactions(user.uid, null);
+
+      // Step 2: Delete all user's custom categories
+      const { deleteAllUserCategories } = await import('@/lib/api/categories');
+      await deleteAllUserCategories(user.uid);
+
+      // Step 3: If user is in a group, delete group data
       if (user.linkedGroupId) {
         // Get the group document to find the other user
         const groupDoc = await getDoc(doc(firestore, 'groups', user.linkedGroupId));
-        if (!groupDoc.exists()) {
-          throw new Error('Group not found');
+        if (groupDoc.exists()) {
+          const groupData = groupDoc.data();
+          const otherUserId = groupData.userIds.find((id: string) => id !== user.uid);
+
+          // Delete all group transactions
+          await deleteAllTransactions(user.uid, user.linkedGroupId);
+
+          // Update partner's user document to remove linkedGroupId
+          if (otherUserId) {
+            const partnerRef = doc(firestore, 'users', otherUserId);
+            await updateDoc(partnerRef, { linkedGroupId: null });
+          }
+
+          // Delete the group document
+          await deleteDoc(doc(firestore, 'groups', user.linkedGroupId));
         }
-
-        const groupData = groupDoc.data();
-        const otherUserId = groupData.userIds.find((id: string) => id !== user.uid);
-
-        // Unlink and transfer transactions
-        await unlinkPartnerAndTransferTransactions(user.uid, otherUserId, user.linkedGroupId);
       }
 
-      // Re-authenticate if password is provided
+      // Step 4: Re-authenticate if password is provided
       if (password && currentUser.email) {
         const credential = EmailAuthProvider.credential(currentUser.email, password);
         await reauthenticateWithCredential(currentUser, credential);
       }
 
-      // Delete user document from Firestore
+      // Step 5: Delete user document from Firestore
       await deleteDoc(doc(firestore, 'users', user.uid));
 
-      // Delete encryption key from secure store
+      // Step 6: Delete encryption key from secure store
       await deletePersonalKey(user.uid);
 
-      // Delete the Firebase Auth user
+      // Step 7: Delete the Firebase Auth user
       await deleteUser(currentUser);
 
       setUser(null);
       setEncryptionKey(null);
+      setGroupEncryptionKey(null);
     } catch (error) {
       console.error('Error deleting account:', error);
       if (error instanceof Error && error.message.includes('requires-recent-login')) {
@@ -329,6 +423,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshEncryptionKey,
         regenerateEncryptionKey,
         getGroupEncryptionKey,
+        isPINRequired,
+        setIsPINRequired,
+        verifyPIN,
+        lastPINVerification,
       }}
     >
       {children}

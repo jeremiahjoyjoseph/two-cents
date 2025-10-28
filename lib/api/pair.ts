@@ -1,7 +1,7 @@
 import { firestore } from '@/config/firebase';
 import { deleteAllTransactions } from '@/lib/api/transactions';
 import { getPersonalKey } from '@/lib/utils';
-import { encryptWithAES, decryptWithAES, generateEncryptionKey } from '@/lib/utils/aes';
+import { decryptWithAES, encryptWithAES, generateEncryptionKey } from '@/lib/utils/aes';
 import {
   addDoc,
   collection,
@@ -298,6 +298,11 @@ export const redeemPartnerCode = async (
 
     // Execute the batch
     await batch.commit();
+    
+    // Merge categories from both users into group
+    const { mergeUserCategoriesToGroup } = await import('@/lib/api/categories');
+    await mergeUserCategoriesToGroup(codeData.generatedBy, uid, groupId);
+    
     console.log('✅ Partner code redeemed successfully');
 
     // Update user data in auth context and load group encryption key

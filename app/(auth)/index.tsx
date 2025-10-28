@@ -1,10 +1,12 @@
+import { AuthTextField } from '@/components/AuthTextField';
 import { UniversalButton } from '@/components/UniversalButton';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, BackHandler, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native';
-import { TextInput, useTheme } from 'react-native-paper';
+import { BackHandler, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useDialog } from '@/components/ThemedDialog';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +15,7 @@ export default function Auth() {
   const theme = useTheme();
   const { login, register, forgotPassword } = useAuth();
   const router = useRouter();
+  const { showDialog, Dialog } = useDialog();
   const [isLogin, setIsLogin] = useState(true);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -24,44 +27,71 @@ export default function Auth() {
     try {
       if (isLogin) {
         const data = { email, password };
-        const response = await login(data);
-        console.log('Login results:', response);
+        try {
+          await login(data);
+          console.log('Login successful');
+          // If login succeeds without PIN, key was cached, go to app
+          // This will be handled by AuthContext
+        } catch (error: any) {
+          if (error.message === 'PIN_REQUIRED') {
+            // Navigate to PIN entry screen
+            router.push('/(auth)/EnterSecurityPIN' as any);
+          } else {
+            throw error;
+          }
+        }
       } else {
         if (password !== confirmPassword) {
-          Alert.alert('Passwords do not match');
+          showDialog('Passwords do not match', {
+            type: 'error',
+            title: 'Validation Error',
+          });
           return;
         }
-        const data = { email, password, name };
-        const response = await register(data);
-        console.log('Register results:', response);
+        // For registration, navigate to PIN setup
+        // Store credentials temporarily for use after PIN is set
+        router.push({
+          pathname: '/(auth)/SetSecurityPIN' as any,
+          params: { email, password, name }
+        });
       }
     } catch (error: any) {
-      Alert.alert(error.message);
+      showDialog(error.message || 'An error occurred', {
+        type: 'error',
+      });
     }
   };
 
   const handleForgotPassword = async () => {
     try {
       if (!email) {
-        Alert.alert('Please enter your email address');
+        showDialog('Please enter your email address', {
+          type: 'warning',
+          title: 'Email Required',
+        });
         return;
       }
       await forgotPassword(email);
-      Alert.alert(
-        'Password Reset Email Sent',
+      showDialog(
         'Please check your email for instructions to reset your password.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowForgotPassword(false);
-              setEmail('');
+        {
+          type: 'success',
+          title: 'Password Reset Email Sent',
+          actions: [
+            {
+              label: 'OK',
+              onPress: () => {
+                setShowForgotPassword(false);
+                setEmail('');
+              },
             },
-          },
-        ]
+          ],
+        }
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showDialog(error.message || 'Failed to send password reset email', {
+        type: 'error',
+      });
     }
   };
 
@@ -87,164 +117,135 @@ export default function Auth() {
 
   if (showForgotPassword) {
     return (
+      <>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <ThemedView style={styles.container}>
+              <ThemedView style={styles.formSection}>
+                <ThemedText type="title" style={styles.title}>
+                  Reset Password
+                </ThemedText>
+
+              <ThemedText style={styles.description}>
+                Enter your email address and we&apos;ll send you a link to reset your password.
+              </ThemedText>
+
+              <AuthTextField
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="Email"
+              />
+            </ThemedView>
+
+            <ThemedView style={styles.buttonSection}>
+              <UniversalButton 
+                variant="auth" 
+                size="xl" 
+                onPress={handleForgotPassword} 
+                style={styles.button}
+                fullWidth
+              >
+                Send Reset Email
+              </UniversalButton>
+
+              <UniversalButton 
+                variant="ghost" 
+                size="medium" 
+                onPress={() => setShowForgotPassword(false)} 
+                style={styles.switchButton}
+              >
+                Back to Sign In
+              </UniversalButton>
+              </ThemedView>
+            </ThemedView>
+          </TouchableWithoutFeedback>
+        </SafeAreaView>
+        <Dialog />
+      </>
+    );
+  }
+
+  return (
+    <>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <ThemedView style={styles.container}>
             <ThemedView style={styles.formSection}>
               <ThemedText type="title" style={styles.title}>
-                Reset Password
+                {isLogin ? 'Sign In' : 'Sign Up'}
               </ThemedText>
 
-            <ThemedText style={styles.description}>
-              Enter your email address and we&apos;ll send you a link to reset your password.
-            </ThemedText>
+            {!isLogin && (
+              <AuthTextField
+                value={name}
+                onChangeText={setName}
+                placeholder="Name"
+              />
+            )}
 
-            <TextInput
-              label=""
+            <AuthTextField
               value={email}
               onChangeText={setEmail}
-              mode="flat"
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="Email"
-              style={styles.input}
-              underlineColor={theme.colors.outlineVariant}
-              activeUnderlineColor={theme.colors.outlineVariant}
-              contentStyle={styles.inputContent}
-              placeholderTextColor={theme.colors.onSurfaceDisabled}
             />
+
+            <AuthTextField
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              secureTextEntry
+            />
+
+            {!isLogin && (
+              <AuthTextField
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm Password"
+                secureTextEntry
+              />
+            )}
+
+            {isLogin && (
+              <UniversalButton 
+                variant="ghost" 
+                size="medium" 
+                onPress={() => setShowForgotPassword(true)} 
+                style={styles.forgotPasswordButton}
+              >
+                Forgot Password?
+              </UniversalButton>
+            )}
           </ThemedView>
 
           <ThemedView style={styles.buttonSection}>
             <UniversalButton 
               variant="auth" 
               size="xl" 
-              onPress={handleForgotPassword} 
+              onPress={handleSubmit} 
               style={styles.button}
               fullWidth
             >
-              Send Reset Email
+              {isLogin ? 'Sign In' : 'Sign Up'}
             </UniversalButton>
 
             <UniversalButton 
               variant="ghost" 
               size="medium" 
-              onPress={() => setShowForgotPassword(false)} 
+              onPress={() => setIsLogin(!isLogin)} 
               style={styles.switchButton}
             >
-              Back to Sign In
+              {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
             </UniversalButton>
             </ThemedView>
           </ThemedView>
         </TouchableWithoutFeedback>
       </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <ThemedView style={styles.container}>
-          <ThemedView style={styles.formSection}>
-            <ThemedText type="title" style={styles.title}>
-              {isLogin ? 'Sign In' : 'Sign Up'}
-            </ThemedText>
-
-          {!isLogin && (
-            <TextInput
-              label=""
-              value={name}
-              onChangeText={setName}
-              mode="flat"
-              placeholder="Name"
-              style={styles.input}
-              underlineColor={theme.colors.outlineVariant}
-              activeUnderlineColor={theme.colors.outlineVariant}
-              contentStyle={styles.inputContent}
-              placeholderTextColor={theme.colors.onSurfaceDisabled}
-            />
-          )}
-
-          <TextInput
-            label=""
-            value={email}
-            onChangeText={setEmail}
-            mode="flat"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="Email"
-            style={styles.input}
-            underlineColor={theme.colors.outlineVariant}
-            activeUnderlineColor={theme.colors.outlineVariant}
-            contentStyle={styles.inputContent}
-            placeholderTextColor={theme.colors.onSurfaceDisabled}
-          />
-
-          <TextInput
-            label=""
-            value={password}
-            onChangeText={setPassword}
-            mode="flat"
-            secureTextEntry
-            placeholder="Password"
-            style={styles.input}
-            underlineColor={theme.colors.outlineVariant}
-            activeUnderlineColor={theme.colors.outlineVariant}
-            contentStyle={styles.inputContent}
-            placeholderTextColor={theme.colors.onSurfaceDisabled}
-          />
-
-          {!isLogin && (
-            <TextInput
-              label=""
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              mode="flat"
-              secureTextEntry
-              placeholder="Confirm Password"
-              style={styles.input}
-              underlineColor={theme.colors.outlineVariant}
-              activeUnderlineColor={theme.colors.outlineVariant}
-              contentStyle={styles.inputContent}
-              placeholderTextColor={theme.colors.onSurfaceDisabled}
-            />
-          )}
-
-          {isLogin && (
-            <UniversalButton 
-              variant="ghost" 
-              size="medium" 
-              onPress={() => setShowForgotPassword(true)} 
-              style={styles.forgotPasswordButton}
-            >
-              Forgot Password?
-            </UniversalButton>
-          )}
-        </ThemedView>
-
-        <ThemedView style={styles.buttonSection}>
-          <UniversalButton 
-            variant="auth" 
-            size="xl" 
-            onPress={handleSubmit} 
-            style={styles.button}
-            fullWidth
-          >
-            {isLogin ? 'Sign In' : 'Sign Up'}
-          </UniversalButton>
-
-          <UniversalButton 
-            variant="ghost" 
-            size="medium" 
-            onPress={() => setIsLogin(!isLogin)} 
-            style={styles.switchButton}
-          >
-            {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-          </UniversalButton>
-          </ThemedView>
-        </ThemedView>
-      </TouchableWithoutFeedback>
-    </SafeAreaView>
+      <Dialog />
+    </>
   );
 }
 
@@ -278,17 +279,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginBottom: 24,
     opacity: 0.7,
-  },
-  input: {
-    marginBottom: 24,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 0,
-    paddingBottom: 8,
-  },
-  inputContent: {
-    fontSize: 18,
-    fontWeight: '600',
-    paddingBottom: 8,
   },
   button: {
     marginTop: 8,

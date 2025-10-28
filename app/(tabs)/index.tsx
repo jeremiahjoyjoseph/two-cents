@@ -324,7 +324,6 @@ const styles = StyleSheet.create({
   dateHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingVertical: 8,
     marginTop: 16,
   },

@@ -20,15 +20,15 @@ export type Transaction = {
 // Encrypted transaction stored in database
 export type EncryptedTransaction = {
   id?: string;
-  title: string;
+  encryptedTitle: string; // Encrypted title as base64 string
   encryptedAmount: string; // Encrypted amount as base64 string
+  encryptedCategoryName?: string; // Encrypted category name as base64 string
   type: TransactionType;
   date: string;
   createdAt: Timestamp;
   createdBy: string;
   groupId?: string | null;
   categoryId?: string;
-  categoryName?: string;
   categoryIcon?: string;
   categoryColor?: string;
 };

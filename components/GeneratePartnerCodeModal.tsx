@@ -4,9 +4,10 @@ import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, MD3Theme, useTheme } from 'react-native-paper';
+import { MD3Theme, useTheme } from 'react-native-paper';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
+import { UniversalButton } from './UniversalButton';
 import { IconSymbol } from './ui/IconSymbol';
 
 interface GeneratePartnerCodeModalProps {
@@ -62,10 +63,15 @@ const getStyles = (theme: MD3Theme) =>
       paddingHorizontal: 24,
       paddingVertical: 24,
       paddingBottom: 40,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.outline,
-      backgroundColor: theme.colors.elevation.level1,
       gap: 16,
+    },
+    cancelButton: {
+      flex: 1,
+      minHeight: 48,
+    },
+    actionButton: {
+      flex: 1,
+      minHeight: 48,
     },
     error: {
       marginBottom: 24,
@@ -159,40 +165,40 @@ export const GeneratePartnerCodeModal: React.FC<GeneratePartnerCodeModalProps> =
           ) : null}
 
           <View style={styles.actionButtonsContainer}>
-            <Button
-              mode="text"
+            <UniversalButton
+              variant="ghost"
+              size="large"
               onPress={handleClose}
-              icon={({ size, color }: { size: number; color: string }) => (
-                <IconSymbol name="close" size={size} color={color} />
-              )}
-              textColor={theme.colors.onSurface}
+              icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+              iconPosition="left"
+              style={styles.cancelButton}
             >
               Cancel
-            </Button>
+            </UniversalButton>
             {!partnerCode ? (
-              <Button
-                mode="contained"
+              <UniversalButton
+                variant="primary"
+                size="large"
                 onPress={generateCode}
-                icon={({ size, color }: { size: number; color: string }) => (
-                  <IconSymbol name="key" size={size} color={color} />
-                )}
-                buttonColor={theme.colors.primary}
                 loading={isLoading}
                 disabled={isLoading}
+                icon={<IconSymbol name="key" size={20} color={theme.colors.onPrimary} />}
+                iconPosition="left"
+                style={styles.actionButton}
               >
                 Generate Code
-              </Button>
+              </UniversalButton>
             ) : (
-              <Button
-                mode="contained"
+              <UniversalButton
+                variant="primary"
+                size="large"
                 onPress={handleCopyCode}
-                icon={({ size, color }: { size: number; color: string }) => (
-                  <IconSymbol name="content-copy" size={size} color={color} />
-                )}
-                buttonColor={theme.colors.primary}
+                icon={<IconSymbol name="content-copy" size={20} color={theme.colors.onPrimary} />}
+                iconPosition="left"
+                style={styles.actionButton}
               >
                 Copy Code
-              </Button>
+              </UniversalButton>
             )}
           </View>
         </ThemedView>

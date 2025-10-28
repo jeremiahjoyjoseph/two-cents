@@ -1,26 +1,28 @@
 import { firestore } from '@/config/firebase';
 import { decryptAmount, encryptAmount } from '@/lib/utils';
+import { decryptWithAES, encryptWithAES } from '@/lib/utils/aes';
 import {
-    EncryptedTransaction,
-    Transaction,
-    TransactionInput,
-    TransactionUpdate,
+  EncryptedTransaction,
+  Transaction,
+  TransactionInput,
+  TransactionUpdate,
 } from '@/types/transactions';
 import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    DocumentData,
-    getDocs,
-    onSnapshot,
-    orderBy,
-    query,
-    QuerySnapshot,
-    Timestamp,
-    updateDoc,
-    where,
-    writeBatch,
+  addDoc,
+  collection,
+  deleteDoc,
+  deleteField,
+  doc,
+  DocumentData,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  QuerySnapshot,
+  Timestamp,
+  updateDoc,
+  where,
+  writeBatch,
 } from 'firebase/firestore';
 
 const getTransactionPath = (userId: string, groupId: string | null) => {
@@ -44,21 +46,34 @@ const encryptTransaction = async (
     );
   }
 
+  // Encrypt sensitive fields
+  const encryptedTitle = await encryptWithAES(transaction.title, encryptionKey);
   const encryptedAmount = await encryptAmount(transaction.amount, encryptionKey);
 
-  return {
-    title: transaction.title,
+  const encryptedData: any = {
+    encryptedTitle,
     encryptedAmount,
     type: transaction.type,
     date: transaction.date,
     createdBy: transaction.createdBy,
     groupId: transaction.groupId || null,
-    // Category fields are NOT encrypted - store as-is
-    categoryId: transaction.categoryId,
-    categoryName: transaction.categoryName,
-    categoryIcon: transaction.categoryIcon,
-    categoryColor: transaction.categoryColor,
   };
+
+  // Only add category fields if they exist
+  if (transaction.categoryName) {
+    encryptedData.encryptedCategoryName = await encryptWithAES(transaction.categoryName, encryptionKey);
+  }
+  if (transaction.categoryId) {
+    encryptedData.categoryId = transaction.categoryId;
+  }
+  if (transaction.categoryIcon) {
+    encryptedData.categoryIcon = transaction.categoryIcon;
+  }
+  if (transaction.categoryColor) {
+    encryptedData.categoryColor = transaction.categoryColor;
+  }
+
+  return encryptedData;
 };
 
 /**
@@ -78,20 +93,25 @@ const decryptTransaction = async (
     );
   }
 
+  // Decrypt sensitive fields
+  const title = await decryptWithAES(encryptedTransaction.encryptedTitle, encryptionKey);
   const amount = await decryptAmount(encryptedTransaction.encryptedAmount, encryptionKey);
+  const categoryName = encryptedTransaction.encryptedCategoryName 
+    ? await decryptWithAES(encryptedTransaction.encryptedCategoryName, encryptionKey) 
+    : undefined;
 
   return {
     id: encryptedTransaction.id,
-    title: encryptedTransaction.title,
+    title,
     amount,
     type: encryptedTransaction.type,
     date: encryptedTransaction.date,
     createdAt: encryptedTransaction.createdAt,
     createdBy: encryptedTransaction.createdBy,
     groupId: encryptedTransaction.groupId || null,
-    // Category fields are passed through as-is (not encrypted)
+    // Category fields
     categoryId: encryptedTransaction.categoryId,
-    categoryName: encryptedTransaction.categoryName,
+    categoryName,
     categoryIcon: encryptedTransaction.categoryIcon,
     categoryColor: encryptedTransaction.categoryColor,
   };
@@ -137,20 +157,56 @@ export const updateTransaction = async (
   const path = getTransactionPath(userId, groupId);
   const ref = doc(firestore, path, transactionId);
 
-  // If amount is being updated, encrypt it
-  const encryptedUpdates: any = { ...updates };
+  const isGroupTransaction = !!groupId;
+  const encryptionKey = isGroupTransaction ? groupKey : personalKey;
+
+  if (!encryptionKey) {
+    throw new Error(
+      `Encryption key not found for ${isGroupTransaction ? 'group' : 'personal'} transaction`
+    );
+  }
+
+  // Start with an empty object to build encrypted updates
+  const encryptedUpdates: any = {};
+  
+  // Encrypt sensitive fields if they are being updated
+  if (updates.title !== undefined) {
+    encryptedUpdates.encryptedTitle = await encryptWithAES(updates.title, encryptionKey);
+  }
+  
   if (updates.amount !== undefined) {
-    const isGroupTransaction = !!groupId;
-    const encryptionKey = isGroupTransaction ? groupKey : personalKey;
-
-    if (!encryptionKey) {
-      throw new Error(
-        `Encryption key not found for ${isGroupTransaction ? 'group' : 'personal'} transaction`
-      );
-    }
-
     encryptedUpdates.encryptedAmount = await encryptAmount(updates.amount, encryptionKey);
-    delete encryptedUpdates.amount; // Remove the unencrypted amount
+  }
+  
+  // Only add category fields if they exist in updates
+  if (updates.categoryName !== undefined) {
+    if (updates.categoryName) {
+      encryptedUpdates.encryptedCategoryName = await encryptWithAES(updates.categoryName, encryptionKey);
+    }
+    // If categoryName is empty string or null, don't include it (Firestore doesn't accept undefined)
+  }
+  
+  // Copy over non-sensitive fields (these are not encrypted)
+  if (updates.type !== undefined) {
+    encryptedUpdates.type = updates.type;
+  }
+  if (updates.date !== undefined) {
+    encryptedUpdates.date = updates.date;
+  }
+  if (updates.categoryId !== undefined) {
+    if (updates.categoryId) {
+      encryptedUpdates.categoryId = updates.categoryId;
+    }
+  }
+  if (updates.categoryIcon !== undefined) {
+    if (updates.categoryIcon) {
+      encryptedUpdates.categoryIcon = updates.categoryIcon;
+    }
+  }
+  if (updates.categoryColor !== undefined) {
+    if (updates.categoryColor) {
+      encryptedUpdates.categoryColor = updates.categoryColor;
+    }
   }
 
   return await updateDoc(ref, encryptedUpdates);
@@ -217,8 +273,8 @@ export const getAllTransactions = async (
 export const listenToTransactions = (
   userId: string,
   groupId: string | null,
-  personalKey: string | null,
-  groupKey: string | null,
+  getPersonalKey: () => Promise<string | null>,
+  getGroupKey: () => Promise<string | null>,
   onUpdate: (transactions: Transaction[]) => void
 ) => {
   const path = getTransactionPath(userId, groupId);
@@ -226,12 +282,16 @@ export const listenToTransactions = (
   const q = query(ref, orderBy('date', 'desc'));
 
   return onSnapshot(q, async (snapshot: QuerySnapshot<DocumentData>) => {
+    // Fetch fresh keys on every snapshot update
+    const personalKey = await getPersonalKey();
+    const groupKey = groupId ? await getGroupKey() : null;
+    
     const encryptedTransactions = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     })) as EncryptedTransaction[];
 
-    // Decrypt all transactions
+    // Decrypt all transactions with fresh keys
     const decryptedTransactions = await Promise.all(
       encryptedTransactions.map(encryptedTransaction =>
         decryptTransaction(encryptedTransaction, personalKey, groupKey)
@@ -255,5 +315,38 @@ export const deleteAllTransactions = async (userId: string, groupId: string | nu
     batch.delete(doc.ref);
   });
 
+  await batch.commit();
+};
+
+/**
+ * Clear all category data from group transactions (used when deleting group category)
+ */
+export const clearCategoryFromGroupTransactions = async (
+  groupId: string,
+  categoryId: string
+): Promise<void> => {
+  const path = `groups/${groupId}/transactions`;
+  const ref = collection(firestore, path);
+  
+  const q = query(ref, where('categoryId', '==', categoryId));
+  const snapshot = await getDocs(q);
+  
+  if (snapshot.empty) {
+    console.log('No group transactions found with categoryId:', categoryId);
+    return;
+  }
+  
+  console.log(`Clearing category data from ${snapshot.docs.length} group transactions`);
+  
+  const batch = writeBatch(firestore);
+  snapshot.docs.forEach((docSnapshot) => {
+    batch.update(docSnapshot.ref, {
+      categoryId: deleteField(),
+      categoryIcon: deleteField(),
+      categoryColor: deleteField(),
+      encryptedCategoryName: deleteField(),
+    });
+  });
+  
   await batch.commit();
 };

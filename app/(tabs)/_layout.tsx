@@ -13,8 +13,8 @@ export default function TabLayout() {
   const { isDark } = useThemeMode();
 
   const tabBarBackgroundColor = isDark
-    ? `${Colors.dark.background}CC` // 80% opacity
-    : `${Colors.light.background}CC`; // 80% opacity
+    ? `${Colors.dark.background}F2` 
+    : `${Colors.light.background}F2`; 
 
   return (
     <Tabs
@@ -27,8 +27,9 @@ export default function TabLayout() {
           elevation: 0,
           backgroundColor: tabBarBackgroundColor,
           height: 100,
-          paddingTop: 8,
-          paddingBottom: 20,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
         },
       }}
     >

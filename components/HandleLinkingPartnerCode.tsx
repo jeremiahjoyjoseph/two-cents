@@ -3,9 +3,10 @@ import { redeemPartnerCode } from '@/lib/api/pair';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, MD3Theme, TextInput, useTheme } from 'react-native-paper';
+import { MD3Theme, TextInput, useTheme } from 'react-native-paper';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
+import { UniversalButton } from './UniversalButton';
 import { IconSymbol } from './ui/IconSymbol';
 
 interface HandleLinkingPartnerCodeProps {
@@ -53,10 +54,15 @@ const getStyles = (theme: MD3Theme) =>
       paddingHorizontal: 24,
       paddingVertical: 24,
       paddingBottom: 40,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.outline,
-      backgroundColor: theme.colors.elevation.level1,
       gap: 16,
+    },
+    cancelButton: {
+      flex: 1,
+      minHeight: 48,
+    },
+    linkButton: {
+      flex: 1,
+      minHeight: 48,
     },
     error: {
       marginBottom: 24,
@@ -139,27 +145,27 @@ export const HandleLinkingPartnerCode: React.FC<HandleLinkingPartnerCodeProps> =
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <View style={styles.actionButtonsContainer}>
-            <Button
-              mode="text"
+            <UniversalButton
+              variant="ghost"
+              size="large"
               onPress={handleClose}
-              icon={({ size, color }: { size: number; color: string }) => (
-                <IconSymbol name="close" size={size} color={color} />
-              )}
-              textColor={theme.colors.onSurface}
+              icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+              iconPosition="left"
+              style={styles.cancelButton}
             >
               Cancel
-            </Button>
-            <Button
-              mode="contained"
+            </UniversalButton>
+            <UniversalButton
+              variant="primary"
+              size="large"
               onPress={handleSubmit}
-              icon={({ size, color }: { size: number; color: string }) => (
-                <IconSymbol name="link" size={size} color={color} />
-              )}
-              buttonColor={theme.colors.primary}
               disabled={!code || code.length !== 6}
+              icon={<IconSymbol name="link" size={20} color={theme.colors.onPrimary} />}
+              iconPosition="left"
+              style={styles.linkButton}
             >
               Link Partner
-            </Button>
+            </UniversalButton>
           </View>
         </ThemedView>
       </ThemedView>

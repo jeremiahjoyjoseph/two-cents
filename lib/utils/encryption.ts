@@ -1,7 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
 import { firestore } from '@/config/firebase';
+import * as SecureStore from 'expo-secure-store';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { deriveKEK, encryptWithAES, decryptWithAES, generateSalt } from './aes';
+import { decryptWithAES, deriveKEK, encryptWithAES, generateSalt } from './aes';
 
 /**
  * Encryption utilities for secure key management
@@ -148,21 +148,21 @@ export const getEncryptedPersonalKeyFromCloud = async (
 };
 
 /**
- * Encrypt personal key with password-derived KEK
+ * Encrypt personal key with PIN-derived KEK
  * @param personalKey - The raw personal encryption key (hex string)
- * @param password - User's password
+ * @param pin - User's 6-digit PIN
  * @returns Object with encrypted key and salt
  */
 export const encryptPersonalKey = async (
   personalKey: string,
-  password: string
+  pin: string
 ): Promise<EncryptedKeyData> => {
   try {
     // Generate salt for PBKDF2
     const salt = await generateSalt();
 
-    // Derive KEK from password
-    const kek = await deriveKEK(password, salt);
+    // Derive KEK from PIN
+    const kek = await deriveKEK(pin, salt);
 
     // Encrypt personal key with KEK
     const encryptedKey = await encryptWithAES(personalKey, kek);
@@ -178,18 +178,18 @@ export const encryptPersonalKey = async (
 };
 
 /**
- * Decrypt personal key using password-derived KEK
+ * Decrypt personal key using PIN-derived KEK
  * @param encryptedData - Encrypted key data from cloud
- * @param password - User's password
+ * @param pin - User's 6-digit PIN
  * @returns Decrypted personal key (hex string)
  */
 export const decryptPersonalKey = async (
   encryptedData: EncryptedKeyData,
-  password: string
+  pin: string
 ): Promise<string> => {
   try {
-    // Derive KEK from password using stored salt
-    const kek = await deriveKEK(password, encryptedData.keySalt);
+    // Derive KEK from PIN using stored salt
+    const kek = await deriveKEK(pin, encryptedData.keySalt);
 
     // Decrypt personal key with KEK
     const personalKey = await decryptWithAES(encryptedData.encryptedPersonalKey, kek);
@@ -197,6 +197,16 @@ export const decryptPersonalKey = async (
     return personalKey;
   } catch (error) {
     console.error('Failed to decrypt personal key:', error);
-    throw new Error('Failed to decrypt personal key - incorrect password or corrupted data');
+    throw new Error('Failed to decrypt personal key - incorrect PIN or corrupted data');
   }
+};
+
+/**
+ * Validate PIN format
+ * @param pin - PIN to validate
+ * @returns True if valid, false otherwise
+ */
+export const validatePIN = (pin: string): boolean => {
+  // Must be exactly 6 digits
+  return /^\d{6}$/.test(pin);
 };

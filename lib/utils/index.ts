@@ -2,16 +2,10 @@
  * Utility functions for the application
  */
 
-export { 
-  deletePersonalKey, 
-  getPersonalKey, 
-  hasPersonalKey, 
-  setPersonalKey,
-  encryptPersonalKey,
-  decryptPersonalKey,
-  storeEncryptedPersonalKeyInCloud,
-  getEncryptedPersonalKeyFromCloud,
-  type EncryptedKeyData
+export {
+  decryptPersonalKey, deletePersonalKey, encryptPersonalKey, getEncryptedPersonalKeyFromCloud, getPersonalKey,
+  hasPersonalKey,
+  setPersonalKey, storeEncryptedPersonalKeyInCloud, validatePIN, type EncryptedKeyData
 } from './encryption';
 export { decryptAmount, encryptAmount, isEncrypted } from './transactionEncryption';
 

@@ -2,7 +2,7 @@ import { useTheme } from '@/constants/theme';
 import { Transaction } from '@/types/transactions';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Price from './Price';
 import { ThemedText } from './ThemedText';
 import { IconSymbol } from './ui/IconSymbol';
@@ -14,10 +14,10 @@ type TransactionListItemProps = {
 export const TransactionListItem = ({ transaction }: TransactionListItemProps) => {
   const theme = useTheme();
   const router = useRouter();
-  const { id, title, amount, type, date, categoryName, categoryIcon, categoryColor } = transaction;
+  const { id, title, amount, type, date, categoryId, categoryName, categoryIcon, categoryColor } = transaction;
 
   const isExpense = type === 'expense';
-  const iconName = isExpense ? 'arrow-upward' : 'arrow-downward';
+  const iconName = isExpense ? 'arrow-downward' : 'arrow-upward';
   const iconColor = theme.colors.primary;
   // More classy colors for income/expense
   const priceColor = isExpense ? '#E53E3E' : '#38A169'; // Deep red for expenses, forest green for income
@@ -38,6 +38,7 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
         amount, 
         type, 
         date,
+        categoryId: categoryId || '',
         categoryName: categoryName || '',
         categoryIcon: categoryIcon || '',
         categoryColor: categoryColor || '',
@@ -50,11 +51,11 @@ export const TransactionListItem = ({ transaction }: TransactionListItemProps) =
       <View style={styles.container}>
         <View style={styles.left}>
           {hasCategory ? (
-            <View style={[styles.iconContainer, { backgroundColor: `${categoryColor}20` }]}>
+            <View style={[styles.iconContainer, { backgroundColor: 'transparent', borderColor: theme.colors.outline }]}>
               <IconSymbol name={categoryIcon as any} size={24} color={categoryColor} />
             </View>
           ) : (
-            <View style={[styles.iconContainer, { backgroundColor: `${iconColor}20` }]}>
+            <View style={[styles.iconContainer, { backgroundColor: 'transparent', borderColor: theme.colors.outline }]}>
               <IconSymbol name={iconName} size={24} color={iconColor} />
             </View>
           )}
@@ -131,10 +132,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 20,
     backgroundColor: 'transparent',
     borderRadius: 12,
-    marginHorizontal: 4,
     marginVertical: 2,
   },
   left: {
@@ -168,20 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 1,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    borderWidth: 1,
   },
   title: {
     fontSize: 18,

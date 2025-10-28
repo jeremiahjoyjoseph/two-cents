@@ -54,7 +54,7 @@ export const useReportData = (
 ): UseReportDataResult => {
   const { user } = useAuth();
   const { transactions, loading: transactionsLoading } = useTransactionsListener(userId, groupId);
-  const { categories, loading: categoriesLoading } = useCategories(user?.uid || '');
+  const { categories, loading: categoriesLoading } = useCategories(user?.uid || '', groupId);
   
   // Filter state
   const [selectedMonth, setSelectedMonth] = useState<string | null>(getCurrentMonth());

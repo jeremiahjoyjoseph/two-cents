@@ -5,9 +5,10 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import Modal from 'react-native-modal';
-import { Button, MD3Theme, useTheme } from 'react-native-paper';
+import { MD3Theme, useTheme } from 'react-native-paper';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
+import { UniversalButton } from './UniversalButton';
 import { IconSymbol } from './ui/IconSymbol';
 
 interface HandleUnlinkPartnerCodeProps {
@@ -50,6 +51,14 @@ const getStyles = (theme: MD3Theme) =>
       borderTopColor: theme.colors.outline,
       backgroundColor: theme.colors.elevation.level1,
       gap: 16,
+    },
+    cancelButton: {
+      flex: 1,
+      minHeight: 48,
+    },
+    unlinkButton: {
+      flex: 1,
+      minHeight: 48,
     },
     error: {
       marginBottom: 24,
@@ -140,28 +149,28 @@ export const HandleUnlinkPartnerCode: React.FC<HandleUnlinkPartnerCodeProps> = (
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <View style={styles.actionButtonsContainer}>
-            <Button
-              mode="text"
+            <UniversalButton
+              variant="ghost"
+              size="large"
               onPress={handleClose}
-              icon={({ size, color }: { size: number; color: string }) => (
-                <IconSymbol name="close" size={size} color={color} />
-              )}
-              textColor={theme.colors.onSurface}
+              icon={<IconSymbol name="close" size={20} color={theme.colors.onSurface} />}
+              iconPosition="left"
+              style={styles.cancelButton}
             >
               Cancel
-            </Button>
-            <Button
-              mode="contained"
+            </UniversalButton>
+            <UniversalButton
+              variant="destructive"
+              size="large"
               onPress={handleUnlink}
-              icon={({ size, color }: { size: number; color: string }) => (
-                <IconSymbol name="link-off" size={size} color={color} />
-              )}
-              buttonColor={theme.colors.error}
               loading={isLoading}
               disabled={isLoading}
+              icon={<IconSymbol name="link-off" size={20} color={theme.colors.onError} />}
+              iconPosition="left"
+              style={styles.unlinkButton}
             >
               Unlink Partner
-            </Button>
+            </UniversalButton>
           </View>
         </ThemedView>
       </ThemedView>

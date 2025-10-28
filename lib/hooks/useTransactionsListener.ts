@@ -24,6 +24,7 @@ export const useTransactionsListener = (
 
     const setupListener = async () => {
       try {
+        // Check if at least one key is available initially
         const personalKey = await getEncryptionKey();
         const groupKey = groupId ? await getGroupEncryptionKey() : null;
 
@@ -33,11 +34,12 @@ export const useTransactionsListener = (
           return;
         }
 
+        // Pass functions directly so keys are fetched fresh on each snapshot
         const unsubscribe = listenToTransactions(
           userId,
           groupId || null,
-          personalKey,
-          groupKey,
+          getEncryptionKey,
+          getGroupEncryptionKey,
           transactions => {
             setTransactions(transactions);
             setLoading(false);

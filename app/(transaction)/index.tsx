@@ -139,7 +139,7 @@ export default function Transaction() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(() => {
     if (params.categoryName && params.categoryIcon && params.categoryColor) {
       return {
-        id: 'existing',
+        id: params.categoryId?.toString() || '',
         name: params.categoryName.toString(),
         icon: params.categoryIcon.toString(),
         color: params.categoryColor.toString(),
@@ -153,7 +153,7 @@ export default function Transaction() {
 
   
   // Get categories from hook
-  const { categories, createCategory, updateCategory } = useCategories(user?.uid || '');
+  const { categories, createCategory, updateCategory, deleteCategory } = useCategories(user?.uid || '', user?.linkedGroupId);
   
   // Update selected category if it was updated
   React.useEffect(() => {
@@ -176,6 +176,17 @@ export default function Transaction() {
         updatedCategory.color !== selectedCategory.color
       )) {
         setSelectedCategory(updatedCategory);
+      }
+    }
+  }, [categories, selectedCategory]);
+
+  // Clear selected category if it was deleted
+  React.useEffect(() => {
+    if (selectedCategory && selectedCategory.id && categories.length > 0) {
+      const categoryStillExists = categories.find(cat => cat.id === selectedCategory.id);
+      if (!categoryStillExists) {
+        console.log('Selected category was deleted, clearing selection');
+        setSelectedCategory(null);
       }
     }
   }, [categories, selectedCategory]);
@@ -463,6 +474,7 @@ export default function Transaction() {
           }, 500);
         }}
         onUpdateCategory={updateCategory}
+        onDeleteCategory={deleteCategory}
         onCategoriesUpdated={() => {
           // Categories will automatically refresh due to the real-time listener
           console.log('Categories updated - listener will handle refresh');

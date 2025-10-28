@@ -8,11 +8,12 @@ import { SettingsButton } from '@/components/ui/SettingsButton';
 import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { VersionDisplay } from '@/components/VersionDisplay';
-import { auth } from '@/config/firebase';
+import { auth, firestore } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteAllTransactions } from '@/lib/api/transactions';
 import { signOut } from 'firebase/auth';
-import React, { useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,7 +26,51 @@ export default function Profile() {
   const [isUnlinkingPartnerCodeModalVisible, setIsUnlinkingPartnerCodeModalVisible] =
     useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [partnerInfo, setPartnerInfo] = useState<string | null>(null);
   const tabBarHeight = useBottomTabOverflow();
+
+  // Fetch partner information when linked
+  useEffect(() => {
+    const fetchPartnerInfo = async () => {
+      if (!user?.linkedGroupId) {
+        setPartnerInfo(null);
+        return;
+      }
+
+      try {
+        // Get group document to find partner's user ID
+        const groupDoc = await getDoc(doc(firestore, 'groups', user.linkedGroupId));
+        if (!groupDoc.exists()) {
+          setPartnerInfo(null);
+          return;
+        }
+
+        const groupData = groupDoc.data();
+        const partnerUserId = groupData.userIds?.find((id: string) => id !== user.uid);
+
+        if (!partnerUserId) {
+          setPartnerInfo(null);
+          return;
+        }
+
+        // Get partner's user document
+        const partnerDoc = await getDoc(doc(firestore, 'users', partnerUserId));
+        if (!partnerDoc.exists()) {
+          setPartnerInfo('Linked Account');
+          return;
+        }
+
+        const partnerData = partnerDoc.data();
+        // Use partner's name if available, otherwise show "Linked Account"
+        setPartnerInfo(partnerData.name || 'Linked Account');
+      } catch (error) {
+        console.error('Error fetching partner info:', error);
+        setPartnerInfo('Linked Account');
+      }
+    };
+
+    fetchPartnerInfo();
+  }, [user?.linkedGroupId, user?.uid]);
 
   const handleSignOut = () => {
     signOut(auth);
@@ -106,7 +151,7 @@ export default function Profile() {
                     {
                       text: 'Delete',
                       style: 'destructive',
-                      onPress: async password => {
+                      onPress: async (password?: string) => {
                         if (!password) return;
                         try {
                           await deleteAccount(password);
@@ -135,6 +180,11 @@ export default function Profile() {
         <View style={styles.header}>
           <ThemedText type="title">Settings</ThemedText>
           {user?.name && <ThemedText type="subtitle">{user.name}</ThemedText>}
+          {partnerInfo && (
+            <ThemedText type="default" style={styles.partnerInfo}>
+              Linked with: {partnerInfo}
+            </ThemedText>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -231,6 +281,10 @@ export default function Profile() {
 const styles = StyleSheet.create({
   header: {
     marginBottom: 24,
+  },
+  partnerInfo: {
+    marginTop: 8,
+    opacity: 0.7,
   },
   section: {
     marginBottom: 24,

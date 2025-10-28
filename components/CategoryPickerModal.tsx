@@ -3,7 +3,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { UniversalButton } from '@/components/UniversalButton';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { useTheme } from 'react-native-paper';
 
@@ -16,6 +16,7 @@ interface CategoryPickerModalProps {
   onUpdateCategory?: (categoryId: string, updatedCategory: any) => Promise<void>;
   onCategoriesUpdated?: () => void;
   currentSelectedCategory?: any;
+  onDeleteCategory?: (categoryId: string) => Promise<void>;
 }
 
 export default function CategoryPickerModal({
@@ -27,6 +28,7 @@ export default function CategoryPickerModal({
   onUpdateCategory,
   onCategoriesUpdated,
   currentSelectedCategory,
+  onDeleteCategory,
 }: CategoryPickerModalProps) {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -70,6 +72,28 @@ export default function CategoryPickerModal({
   const handleCloseEditModal = () => {
     setEditModalVisible(false);
     setEditingCategory(null);
+  };
+
+  const handleDeleteCategory = async (category: any) => {
+    Alert.alert(
+      'Delete Category',
+      `Are you sure you want to delete "${category.name}"? Transactions using this category will still display with their saved icon and color.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (onDeleteCategory) {
+              await onDeleteCategory(category.id);
+              if (onCategoriesUpdated) {
+                onCategoriesUpdated();
+              }
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Auto-highlight current selected category when modal opens
@@ -157,6 +181,18 @@ export default function CategoryPickerModal({
                   name="edit" 
                   size={18} 
                   color={theme.colors.onSurfaceVariant} 
+                />
+              </TouchableOpacity>
+
+              {/* Delete Button */}
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteCategory(category)}
+              >
+                <IconSymbol 
+                  name="delete" 
+                  size={18} 
+                  color={theme.colors.error} 
                 />
               </TouchableOpacity>
             </View>
@@ -267,6 +303,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,0,0,0.1)',
+    marginLeft: 8,
   },
   categoryContent: {
     flexDirection: 'row',

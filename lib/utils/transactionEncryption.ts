@@ -1,4 +1,4 @@
-import { encryptWithAES, decryptWithAES } from './aes';
+import { decryptWithAES, encryptWithAES } from './aes';
 
 /**
  * Transaction encryption utilities
