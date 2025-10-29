@@ -3,17 +3,17 @@ import { deleteAllTransactions } from '@/lib/api/transactions';
 import { getPersonalKey } from '@/lib/utils';
 import { decryptWithAES, encryptWithAES, generateEncryptionKey } from '@/lib/utils/aes';
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  setDoc,
-  Timestamp,
-  where,
-  writeBatch,
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    getDoc,
+    getDocs,
+    query,
+    setDoc,
+    Timestamp,
+    where,
+    writeBatch,
 } from 'firebase/firestore';
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

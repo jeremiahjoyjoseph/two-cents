@@ -1,12 +1,12 @@
-import { 
-  createCategory, 
+import {
+  createCategory,
   createGroupCategory,
-  deleteCategory, 
+  deleteCategory,
   deleteGroupCategory,
-  initializeDefaultCategories, 
+  initializeDefaultCategories,
   initializeGroupCategories,
   listenToGroupCategories,
-  listenToUserCategories, 
+  listenToUserCategories,
   updateCategory,
   updateGroupCategory,
 } from '@/lib/api/categories';

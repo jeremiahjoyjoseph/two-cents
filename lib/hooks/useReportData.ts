@@ -2,19 +2,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCategories } from '@/lib/hooks/useCategories';
 import { useTransactionsListener } from '@/lib/hooks/useTransactionsListener';
 import {
-  calculateNetAmount,
-  calculateTotalIncome,
-  calculateTotalSpending,
-  CategorySummary,
-  filterTransactions,
-  formatMonthString,
-  getCurrentMonth,
-  getLast12Months,
-  getSpendingTrend,
-  groupTransactionsByCategory,
-  groupTransactionsByMonth,
-  MonthlySummary,
-  ReportFilters,
+    calculateNetAmount,
+    calculateTotalIncome,
+    calculateTotalSpending,
+    CategorySummary,
+    filterTransactions,
+    formatMonthString,
+    getCurrentMonth,
+    getLast12Months,
+    getSpendingTrend,
+    groupTransactionsByCategory,
+    groupTransactionsByMonth,
+    MonthlySummary,
+    ReportFilters,
 } from '@/lib/utils/reporting';
 import { useMemo, useState } from 'react';
 
